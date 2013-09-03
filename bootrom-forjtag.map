@@ -1,0 +1,111 @@
+
+Memory Configuration
+
+Name             Origin             Length             Attributes
+*default*        0x00000000         0xffffffff
+
+Linker script and memory map
+
+                0x00200000                . = 0x200000
+
+.text           0x00200000      0x960
+ obj/ram-reset.o(.text)
+ .text          0x00200000        0xc obj/ram-reset.o
+                0x00200000                start
+ *(.text)
+ .text          0x0020000c      0x2fc obj/bootrom.o
+                0x00200094                UsbPacketReceived
+                0x0020016c                Bootrom
+ .text          0x00200308      0x648 obj/usb.o
+                0x00200690                UsbSendPacket
+                0x00200834                UsbStart
+                0x002008b0                UsbPoll
+ .text.stub     0x00200950        0xc linker stubs
+
+.glue_7         0x00200960        0x0
+ .glue_7        0x00000000        0x0 linker stubs
+
+.glue_7t        0x00200960        0x0
+ .glue_7t       0x00000000        0x0 linker stubs
+
+.vfp11_veneer   0x00200960        0x0
+ .vfp11_veneer  0x00000000        0x0 linker stubs
+
+.v4_bx          0x00200960        0x0
+ .v4_bx         0x00000000        0x0 linker stubs
+
+.rodata         0x00200960       0xe0
+ *(.rodata)
+ .rodata        0x00200960       0xe0 obj/usb.o
+
+.data           0x00200a40        0x0
+ *(.data)
+ .data          0x00200a40        0x0 obj/ram-reset.o
+ .data          0x00200a40        0x0 obj/bootrom.o
+ .data          0x00200a40        0x0 obj/usb.o
+                0x00200a40                __bss_start__ = .
+
+.bss            0x00200a40       0x48
+ *(.bss)
+ .bss           0x00200a40        0x0 obj/ram-reset.o
+ .bss           0x00200a40        0x0 obj/bootrom.o
+ .bss           0x00200a40       0x48 obj/usb.o
+                0x00200a88                __bss_end__ = .
+LOAD obj/bootrom.o
+LOAD obj/ram-reset.o
+LOAD obj/usb.o
+OUTPUT(obj/bootrom-forjtag.elf elf32-littlearm)
+
+.ARM.attributes
+                0x00000000       0x2e
+ .ARM.attributes
+                0x00000000       0x16 obj/ram-reset.o
+ .ARM.attributes
+                0x00000016       0x32 obj/bootrom.o
+ .ARM.attributes
+                0x00000048       0x32 obj/usb.o
+
+.comment        0x00000000       0x11
+ .comment       0x00000000       0x11 obj/bootrom.o
+                                 0x12 (size before relaxing)
+ .comment       0x00000000       0x12 obj/usb.o
+
+.debug_line     0x00000000      0x335
+ .debug_line    0x00000000       0x3a obj/ram-reset.o
+ .debug_line    0x0000003a      0x125 obj/bootrom.o
+ .debug_line    0x0000015f      0x1d6 obj/usb.o
+
+.debug_info     0x00000000      0x67a
+ .debug_info    0x00000000       0x5e obj/ram-reset.o
+ .debug_info    0x0000005e      0x209 obj/bootrom.o
+ .debug_info    0x00000267      0x413 obj/usb.o
+
+.debug_abbrev   0x00000000      0x2b8
+ .debug_abbrev  0x00000000       0x14 obj/ram-reset.o
+ .debug_abbrev  0x00000014      0x12d obj/bootrom.o
+ .debug_abbrev  0x00000141      0x177 obj/usb.o
+
+.debug_aranges  0x00000000       0x60
+ .debug_aranges
+                0x00000000       0x20 obj/ram-reset.o
+ .debug_aranges
+                0x00000020       0x20 obj/bootrom.o
+ .debug_aranges
+                0x00000040       0x20 obj/usb.o
+
+.debug_loc      0x00000000      0x244
+ .debug_loc     0x00000000       0xc8 obj/bootrom.o
+ .debug_loc     0x000000c8      0x17c obj/usb.o
+
+.debug_ranges   0x00000000       0x20
+ .debug_ranges  0x00000000       0x20 obj/bootrom.o
+
+.debug_str      0x00000000      0x271
+ .debug_str     0x00000000      0x108 obj/bootrom.o
+                                0x126 (size before relaxing)
+ .debug_str     0x00000108      0x169 obj/usb.o
+                                0x217 (size before relaxing)
+
+.debug_frame    0x00000000      0x174
+ .debug_frame   0x00000000       0x88 obj/bootrom.o
+ .debug_frame   0x00000088       0xec obj/usb.o
