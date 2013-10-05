@@ -197,8 +197,8 @@ run_flash:
 				// to specify the address.
 				asm("mov r3, #129\n");
 				asm("lsl r3, r3, #13\n");
-				asm("mov r4, #1\n");
-				asm("orr r3, r4\n");
+				//asm("mov r4, #1\n");  // we don't need this!
+				//asm("orr r3, r4\n");
 				asm("bx r3\n");
 			} else {
 				start = now;

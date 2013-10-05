@@ -1,0 +1,1809 @@
+
+obj/bootrom-forjtag.elf:     file format elf32-littlearm
+
+
+Disassembly of section .text:
+
+00200000 <start>:
+.code 32
+.align 0
+
+.global start
+start:
+    ldr     sp,     = 0x00203ff8
+  200000:	e59fd000 	ldr	sp, [pc, #0]	; 200008 <start+0x8>
+    bl      Bootrom
+  200004:	eb000251 	bl	200950 <__Bootrom_from_arm>
+  200008:	00203ff8 	.word	0x00203ff8
+
+0020000c <ConfigClocks>:
+
+#define         AT91C_PMC_PRES_CLK_2                ((unsigned int) 0x1 <<  2) // (PMC) Selected clock divided by 2
+#define         AT91C_PMC_CSS_PLL_CLK              ((unsigned int) 0x3) // (PMC) Clock from PLL is selected
+
+static void ConfigClocks(void)
+{
+  20000c:	b580      	push	{r7, lr}
+  20000e:	af00      	add	r7, sp, #0
+	PMC_MAIN_OSCILLATOR = ( AT91C_CKGR_OSCOUNT & (0x40 <<8)) | AT91C_CKGR_MOSCEN;
+  200010:	4b18      	ldr	r3, [pc, #96]	; (200074 <ConfigClocks+0x68>)
+  200012:	4a19      	ldr	r2, [pc, #100]	; (200078 <ConfigClocks+0x6c>)
+  200014:	601a      	str	r2, [r3, #0]
+	// Wait Main Oscillator stabilization
+	while(!(PMC_INTERRUPT_STATUS & AT91C_PMC_MOSCS));
+  200016:	46c0      	nop			; (mov r8, r8)
+  200018:	4b18      	ldr	r3, [pc, #96]	; (20007c <ConfigClocks+0x70>)
+  20001a:	681a      	ldr	r2, [r3, #0]
+  20001c:	2301      	movs	r3, #1
+  20001e:	4013      	ands	r3, r2
+  200020:	d0fa      	beq.n	200018 <ConfigClocks+0xc>
+
+	// Init PMC Step 2.
+	PMC_PLL = AT91C_CKGR_USBDIV_1           |
+  200022:	4b17      	ldr	r3, [pc, #92]	; (200080 <ConfigClocks+0x74>)
+  200024:	4a17      	ldr	r2, [pc, #92]	; (200084 <ConfigClocks+0x78>)
+  200026:	601a      	str	r2, [r3, #0]
+							   (16 << 8)                     |
+							   (AT91C_CKGR_MUL & (72 << 16)) |
+							   (AT91C_CKGR_DIV & 14);
+
+	// Wait for PLL stabilization
+	while( !(PMC_INTERRUPT_STATUS & AT91C_PMC_LOCK) );
+  200028:	46c0      	nop			; (mov r8, r8)
+  20002a:	4b14      	ldr	r3, [pc, #80]	; (20007c <ConfigClocks+0x70>)
+  20002c:	681a      	ldr	r2, [r3, #0]
+  20002e:	2304      	movs	r3, #4
+  200030:	4013      	ands	r3, r2
+  200032:	d0fa      	beq.n	20002a <ConfigClocks+0x1e>
+	// Wait until the master clock is established for the case we already
+	// turn on the PLL
+	while( !(PMC_INTERRUPT_STATUS & AT91C_PMC_MCKRDY) );
+  200034:	46c0      	nop			; (mov r8, r8)
+  200036:	4b11      	ldr	r3, [pc, #68]	; (20007c <ConfigClocks+0x70>)
+  200038:	681a      	ldr	r2, [r3, #0]
+  20003a:	2308      	movs	r3, #8
+  20003c:	4013      	ands	r3, r2
+  20003e:	d0fa      	beq.n	200036 <ConfigClocks+0x2a>
+
+	 // Init PMC Step 3.
+	PMC_MASTER_CLK = AT91C_PMC_PRES_CLK_2;
+  200040:	4b11      	ldr	r3, [pc, #68]	; (200088 <ConfigClocks+0x7c>)
+  200042:	2204      	movs	r2, #4
+  200044:	601a      	str	r2, [r3, #0]
+	// Wait until the master clock is established
+	while( !(PMC_INTERRUPT_STATUS & AT91C_PMC_MCKRDY) );
+  200046:	46c0      	nop			; (mov r8, r8)
+  200048:	4b0c      	ldr	r3, [pc, #48]	; (20007c <ConfigClocks+0x70>)
+  20004a:	681a      	ldr	r2, [r3, #0]
+  20004c:	2308      	movs	r3, #8
+  20004e:	4013      	ands	r3, r2
+  200050:	d0fa      	beq.n	200048 <ConfigClocks+0x3c>
+
+	PMC_MASTER_CLK |= AT91C_PMC_CSS_PLL_CLK;
+  200052:	4b0d      	ldr	r3, [pc, #52]	; (200088 <ConfigClocks+0x7c>)
+  200054:	4a0c      	ldr	r2, [pc, #48]	; (200088 <ConfigClocks+0x7c>)
+  200056:	6812      	ldr	r2, [r2, #0]
+  200058:	2103      	movs	r1, #3
+  20005a:	430a      	orrs	r2, r1
+  20005c:	601a      	str	r2, [r3, #0]
+	// Wait until the master clock is established
+	while( !(PMC_INTERRUPT_STATUS & AT91C_PMC_MCKRDY) );
+  20005e:	46c0      	nop			; (mov r8, r8)
+  200060:	4b06      	ldr	r3, [pc, #24]	; (20007c <ConfigClocks+0x70>)
+  200062:	681a      	ldr	r2, [r3, #0]
+  200064:	2308      	movs	r3, #8
+  200066:	4013      	ands	r3, r2
+  200068:	d0fa      	beq.n	200060 <ConfigClocks+0x54>
+}
+  20006a:	46bd      	mov	sp, r7
+  20006c:	bc80      	pop	{r7}
+  20006e:	bc01      	pop	{r0}
+  200070:	4700      	bx	r0
+  200072:	46c0      	nop			; (mov r8, r8)
+  200074:	fffffc20 	.word	0xfffffc20
+  200078:	00004001 	.word	0x00004001
+  20007c:	fffffc68 	.word	0xfffffc68
+  200080:	fffffc2c 	.word	0xfffffc2c
+  200084:	1048100e 	.word	0x1048100e
+  200088:	fffffc30 	.word	0xfffffc30
+
+0020008c <Fatal>:
+
+static void Fatal(void)
+{
+  20008c:	b580      	push	{r7, lr}
+  20008e:	af00      	add	r7, sp, #0
+	for(;;);
+  200090:	e7fe      	b.n	200090 <Fatal+0x4>
+  200092:	46c0      	nop			; (mov r8, r8)
+
+00200094 <UsbPacketReceived>:
+}
+
+void UsbPacketReceived(BYTE *packet, int len)
+{
+  200094:	b580      	push	{r7, lr}
+  200096:	b086      	sub	sp, #24
+  200098:	af00      	add	r7, sp, #0
+  20009a:	6078      	str	r0, [r7, #4]
+  20009c:	6039      	str	r1, [r7, #0]
+	int i;
+	UsbCommand *c = (UsbCommand *)packet;
+  20009e:	687b      	ldr	r3, [r7, #4]
+  2000a0:	613b      	str	r3, [r7, #16]
+	volatile DWORD *p;
+
+	if(len != sizeof(*c)) {
+  2000a2:	683b      	ldr	r3, [r7, #0]
+  2000a4:	2b40      	cmp	r3, #64	; 0x40
+  2000a6:	d001      	beq.n	2000ac <UsbPacketReceived+0x18>
+		Fatal();
+  2000a8:	f7ff fff0 	bl	20008c <Fatal>
+	}
+
+	switch(c->cmd) {
+  2000ac:	693b      	ldr	r3, [r7, #16]
+  2000ae:	681b      	ldr	r3, [r3, #0]
+  2000b0:	2b01      	cmp	r3, #1
+  2000b2:	d005      	beq.n	2000c0 <UsbPacketReceived+0x2c>
+  2000b4:	d347      	bcc.n	200146 <UsbPacketReceived+0xb2>
+  2000b6:	2b03      	cmp	r3, #3
+  2000b8:	d01b      	beq.n	2000f2 <UsbPacketReceived+0x5e>
+  2000ba:	2b04      	cmp	r3, #4
+  2000bc:	d045      	beq.n	20014a <UsbPacketReceived+0xb6>
+  2000be:	e03f      	b.n	200140 <UsbPacketReceived+0xac>
+		case CMD_DEVICE_INFO:
+			break;
+
+		case CMD_SETUP_WRITE:
+			p = (volatile DWORD *)0;
+  2000c0:	2300      	movs	r3, #0
+  2000c2:	60fb      	str	r3, [r7, #12]
+			for(i = 0; i < 12; i++) {
+  2000c4:	2300      	movs	r3, #0
+  2000c6:	617b      	str	r3, [r7, #20]
+  2000c8:	e00f      	b.n	2000ea <UsbPacketReceived+0x56>
+				p[i+c->ext1] = c->d.asDwords[i];
+  2000ca:	693b      	ldr	r3, [r7, #16]
+  2000cc:	685a      	ldr	r2, [r3, #4]
+  2000ce:	697b      	ldr	r3, [r7, #20]
+  2000d0:	18d3      	adds	r3, r2, r3
+  2000d2:	009b      	lsls	r3, r3, #2
+  2000d4:	68fa      	ldr	r2, [r7, #12]
+  2000d6:	18d3      	adds	r3, r2, r3
+  2000d8:	693a      	ldr	r2, [r7, #16]
+  2000da:	6979      	ldr	r1, [r7, #20]
+  2000dc:	3104      	adds	r1, #4
+  2000de:	0089      	lsls	r1, r1, #2
+  2000e0:	588a      	ldr	r2, [r1, r2]
+  2000e2:	601a      	str	r2, [r3, #0]
+		case CMD_DEVICE_INFO:
+			break;
+
+		case CMD_SETUP_WRITE:
+			p = (volatile DWORD *)0;
+			for(i = 0; i < 12; i++) {
+  2000e4:	697b      	ldr	r3, [r7, #20]
+  2000e6:	3301      	adds	r3, #1
+  2000e8:	617b      	str	r3, [r7, #20]
+  2000ea:	697b      	ldr	r3, [r7, #20]
+  2000ec:	2b0b      	cmp	r3, #11
+  2000ee:	ddec      	ble.n	2000ca <UsbPacketReceived+0x36>
+				p[i+c->ext1] = c->d.asDwords[i];
+			}
+			break;
+  2000f0:	e02c      	b.n	20014c <UsbPacketReceived+0xb8>
+
+		case CMD_FINISH_WRITE:
+			p = (volatile DWORD *)0;
+  2000f2:	2300      	movs	r3, #0
+  2000f4:	60fb      	str	r3, [r7, #12]
+			for(i = 0; i < 4; i++) {
+  2000f6:	2300      	movs	r3, #0
+  2000f8:	617b      	str	r3, [r7, #20]
+  2000fa:	e00d      	b.n	200118 <UsbPacketReceived+0x84>
+				p[i+60] = c->d.asDwords[i];
+  2000fc:	697b      	ldr	r3, [r7, #20]
+  2000fe:	333c      	adds	r3, #60	; 0x3c
+  200100:	009b      	lsls	r3, r3, #2
+  200102:	68fa      	ldr	r2, [r7, #12]
+  200104:	18d3      	adds	r3, r2, r3
+  200106:	693a      	ldr	r2, [r7, #16]
+  200108:	6979      	ldr	r1, [r7, #20]
+  20010a:	3104      	adds	r1, #4
+  20010c:	0089      	lsls	r1, r1, #2
+  20010e:	588a      	ldr	r2, [r1, r2]
+  200110:	601a      	str	r2, [r3, #0]
+			}
+			break;
+
+		case CMD_FINISH_WRITE:
+			p = (volatile DWORD *)0;
+			for(i = 0; i < 4; i++) {
+  200112:	697b      	ldr	r3, [r7, #20]
+  200114:	3301      	adds	r3, #1
+  200116:	617b      	str	r3, [r7, #20]
+  200118:	697b      	ldr	r3, [r7, #20]
+  20011a:	2b03      	cmp	r3, #3
+  20011c:	ddee      	ble.n	2000fc <UsbPacketReceived+0x68>
+				p[i+60] = c->d.asDwords[i];
+			}
+
+			MC_FLASH_COMMAND = MC_FLASH_COMMAND_KEY |
+  20011e:	239c      	movs	r3, #156	; 0x9c
+  200120:	425b      	negs	r3, r3
+				MC_FLASH_COMMAND_PAGEN(c->ext1/FLASH_PAGE_SIZE_BYTES) |
+  200122:	693a      	ldr	r2, [r7, #16]
+  200124:	6852      	ldr	r2, [r2, #4]
+  200126:	0a12      	lsrs	r2, r2, #8
+  200128:	0212      	lsls	r2, r2, #8
+  20012a:	490f      	ldr	r1, [pc, #60]	; (200168 <UsbPacketReceived+0xd4>)
+  20012c:	430a      	orrs	r2, r1
+			p = (volatile DWORD *)0;
+			for(i = 0; i < 4; i++) {
+				p[i+60] = c->d.asDwords[i];
+			}
+
+			MC_FLASH_COMMAND = MC_FLASH_COMMAND_KEY |
+  20012e:	601a      	str	r2, [r3, #0]
+				MC_FLASH_COMMAND_PAGEN(c->ext1/FLASH_PAGE_SIZE_BYTES) |
+				FCMD_WRITE_PAGE;
+			while(!(MC_FLASH_STATUS & MC_FLASH_STATUS_READY))
+  200130:	46c0      	nop			; (mov r8, r8)
+  200132:	2398      	movs	r3, #152	; 0x98
+  200134:	425b      	negs	r3, r3
+  200136:	681a      	ldr	r2, [r3, #0]
+  200138:	2301      	movs	r3, #1
+  20013a:	4013      	ands	r3, r2
+  20013c:	d0f9      	beq.n	200132 <UsbPacketReceived+0x9e>
+				;
+			break;
+  20013e:	e005      	b.n	20014c <UsbPacketReceived+0xb8>
+
+		case CMD_HARDWARE_RESET:
+			break;
+
+		default:
+			Fatal();
+  200140:	f7ff ffa4 	bl	20008c <Fatal>
+			break;
+  200144:	e002      	b.n	20014c <UsbPacketReceived+0xb8>
+		Fatal();
+	}
+
+	switch(c->cmd) {
+		case CMD_DEVICE_INFO:
+			break;
+  200146:	46c0      	nop			; (mov r8, r8)
+  200148:	e000      	b.n	20014c <UsbPacketReceived+0xb8>
+			while(!(MC_FLASH_STATUS & MC_FLASH_STATUS_READY))
+				;
+			break;
+
+		case CMD_HARDWARE_RESET:
+			break;
+  20014a:	46c0      	nop			; (mov r8, r8)
+		default:
+			Fatal();
+			break;
+	}
+
+	c->cmd = CMD_ACK;
+  20014c:	693b      	ldr	r3, [r7, #16]
+  20014e:	22ff      	movs	r2, #255	; 0xff
+  200150:	601a      	str	r2, [r3, #0]
+	UsbSendPacket(packet, len);
+  200152:	687a      	ldr	r2, [r7, #4]
+  200154:	683b      	ldr	r3, [r7, #0]
+  200156:	1c10      	adds	r0, r2, #0
+  200158:	1c19      	adds	r1, r3, #0
+  20015a:	f000 fa97 	bl	20068c <UsbSendPacket>
+}
+  20015e:	46bd      	mov	sp, r7
+  200160:	b006      	add	sp, #24
+  200162:	bc80      	pop	{r7}
+  200164:	bc01      	pop	{r0}
+  200166:	4700      	bx	r0
+  200168:	5a000001 	.word	0x5a000001
+
+0020016c <Bootrom>:
+
+void Bootrom(void)
+{
+  20016c:	b580      	push	{r7, lr}
+  20016e:	b082      	sub	sp, #8
+  200170:	af00      	add	r7, sp, #0
+
+	int i = 0;
+  200172:	2300      	movs	r3, #0
+  200174:	607b      	str	r3, [r7, #4]
+	// First set up all the I/O pins; GPIOs configured directly, other ones
+	// just need to be assigned to the appropriate peripheral.
+
+	// Kill all the pullups, especially the one on USB D+; leave them for
+	// the unused pins, though.
+	PIO_NO_PULL_UP_ENABLE =     (1 << GPIO_LED);
+  200176:	4b4e      	ldr	r3, [pc, #312]	; (2002b0 <Bootrom+0x144>)
+  200178:	2280      	movs	r2, #128	; 0x80
+  20017a:	0612      	lsls	r2, r2, #24
+  20017c:	601a      	str	r2, [r3, #0]
+
+	PIO_OUTPUT_ENABLE =         (1 << GPIO_USB_PU)          |
+  20017e:	4b4d      	ldr	r3, [pc, #308]	; (2002b4 <Bootrom+0x148>)
+  200180:	4a4d      	ldr	r2, [pc, #308]	; (2002b8 <Bootrom+0x14c>)
+  200182:	601a      	str	r2, [r3, #0]
+								(1 << GPIO_LED);
+
+	PIO_ENABLE =                (1 << GPIO_KEY)             |
+  200184:	4b4d      	ldr	r3, [pc, #308]	; (2002bc <Bootrom+0x150>)
+  200186:	4a4e      	ldr	r2, [pc, #312]	; (2002c0 <Bootrom+0x154>)
+  200188:	601a      	str	r2, [r3, #0]
+								(1 << GPIO_USB_PU)          |
+								(1 << GPIO_LED);
+
+	PIO_GLITCH_ENABLE =         (1 << GPIO_KEY);
+  20018a:	4b4e      	ldr	r3, [pc, #312]	; (2002c4 <Bootrom+0x158>)
+  20018c:	2201      	movs	r2, #1
+  20018e:	601a      	str	r2, [r3, #0]
+
+	LED_ON();
+  200190:	4b4d      	ldr	r3, [pc, #308]	; (2002c8 <Bootrom+0x15c>)
+  200192:	2280      	movs	r2, #128	; 0x80
+  200194:	0612      	lsls	r2, r2, #24
+  200196:	601a      	str	r2, [r3, #0]
+
+	// stack setup?
+	USB_D_PLUS_PULLUP_OFF();
+  200198:	4b4c      	ldr	r3, [pc, #304]	; (2002cc <Bootrom+0x160>)
+  20019a:	2280      	movs	r2, #128	; 0x80
+  20019c:	0252      	lsls	r2, r2, #9
+  20019e:	601a      	str	r2, [r3, #0]
+  2001a0:	4b44      	ldr	r3, [pc, #272]	; (2002b4 <Bootrom+0x148>)
+  2001a2:	2280      	movs	r2, #128	; 0x80
+  2001a4:	0252      	lsls	r2, r2, #9
+  2001a6:	601a      	str	r2, [r3, #0]
+
+
+	for(i = 0; i < 1000000; i++) LED_OFF(); // delay a bit, before testing the key
+  2001a8:	2300      	movs	r3, #0
+  2001aa:	607b      	str	r3, [r7, #4]
+  2001ac:	e006      	b.n	2001bc <Bootrom+0x50>
+  2001ae:	4b47      	ldr	r3, [pc, #284]	; (2002cc <Bootrom+0x160>)
+  2001b0:	2280      	movs	r2, #128	; 0x80
+  2001b2:	0612      	lsls	r2, r2, #24
+  2001b4:	601a      	str	r2, [r3, #0]
+  2001b6:	687b      	ldr	r3, [r7, #4]
+  2001b8:	3301      	adds	r3, #1
+  2001ba:	607b      	str	r3, [r7, #4]
+  2001bc:	687a      	ldr	r2, [r7, #4]
+  2001be:	4b44      	ldr	r3, [pc, #272]	; (2002d0 <Bootrom+0x164>)
+  2001c0:	429a      	cmp	r2, r3
+  2001c2:	ddf4      	ble.n	2001ae <Bootrom+0x42>
+
+	if (PIO_PIN_DATA_STATUS&(1<<GPIO_KEY)) goto run_flash;
+  2001c4:	4b43      	ldr	r3, [pc, #268]	; (2002d4 <Bootrom+0x168>)
+  2001c6:	681b      	ldr	r3, [r3, #0]
+  2001c8:	1c1a      	adds	r2, r3, #0
+  2001ca:	2301      	movs	r3, #1
+  2001cc:	4013      	ands	r3, r2
+  2001ce:	061b      	lsls	r3, r3, #24
+  2001d0:	0e1b      	lsrs	r3, r3, #24
+  2001d2:	d156      	bne.n	200282 <Bootrom+0x116>
+
+	// disable watchdog
+	WDT_MODE = WDT_MODE_DISABLE;
+  2001d4:	4b40      	ldr	r3, [pc, #256]	; (2002d8 <Bootrom+0x16c>)
+  2001d6:	2280      	movs	r2, #128	; 0x80
+  2001d8:	0212      	lsls	r2, r2, #8
+  2001da:	601a      	str	r2, [r3, #0]
+
+	LED_ON();
+  2001dc:	4b3a      	ldr	r3, [pc, #232]	; (2002c8 <Bootrom+0x15c>)
+  2001de:	2280      	movs	r2, #128	; 0x80
+  2001e0:	0612      	lsls	r2, r2, #24
+  2001e2:	601a      	str	r2, [r3, #0]
+
+	// Configure the flash that we are running out of.
+	MC_FLASH_MODE = MC_FLASH_MODE_FLASH_WAIT_STATES(1) |
+  2001e4:	23a0      	movs	r3, #160	; 0xa0
+  2001e6:	425b      	negs	r3, r3
+  2001e8:	4a3c      	ldr	r2, [pc, #240]	; (2002dc <Bootrom+0x170>)
+  2001ea:	601a      	str	r2, [r3, #0]
+		MC_FLASH_MODE_MASTER_CLK_IN_MHZ(48);
+
+	// Careful, a lot of peripherals can't be configured until the PLL clock
+	// comes up; you write to the registers but it doesn't stick.
+	ConfigClocks();
+  2001ec:	f7ff ff0e 	bl	20000c <ConfigClocks>
+	UsbStart();
+  2001f0:	f000 fb1e 	bl	200830 <UsbStart>
+
+	// Borrow a PWM unit for my real-time clock
+	PWM_ENABLE = PWM_CHANNEL(0);
+  2001f4:	4b3a      	ldr	r3, [pc, #232]	; (2002e0 <Bootrom+0x174>)
+  2001f6:	2201      	movs	r2, #1
+  2001f8:	601a      	str	r2, [r3, #0]
+	// 48 MHz / 1024 gives 46.875 kHz
+	PWM_CH_MODE(0) = PWM_CH_MODE_PRESCALER(10);
+  2001fa:	4b3a      	ldr	r3, [pc, #232]	; (2002e4 <Bootrom+0x178>)
+  2001fc:	220a      	movs	r2, #10
+  2001fe:	601a      	str	r2, [r3, #0]
+	PWM_CH_DUTY_CYCLE(0) = 0;
+  200200:	4b39      	ldr	r3, [pc, #228]	; (2002e8 <Bootrom+0x17c>)
+  200202:	2200      	movs	r2, #0
+  200204:	601a      	str	r2, [r3, #0]
+	PWM_CH_PERIOD(0) = 0xffff;
+  200206:	4b39      	ldr	r3, [pc, #228]	; (2002ec <Bootrom+0x180>)
+  200208:	4a39      	ldr	r2, [pc, #228]	; (2002f0 <Bootrom+0x184>)
+  20020a:	601a      	str	r2, [r3, #0]
+
+	WORD start = (SWORD)PWM_CH_COUNTER(0);
+  20020c:	4b39      	ldr	r3, [pc, #228]	; (2002f4 <Bootrom+0x188>)
+  20020e:	681a      	ldr	r2, [r3, #0]
+  200210:	1cbb      	adds	r3, r7, #2
+  200212:	801a      	strh	r2, [r3, #0]
+
+	i=0;
+  200214:	2300      	movs	r3, #0
+  200216:	607b      	str	r3, [r7, #4]
+  200218:	e000      	b.n	20021c <Bootrom+0xb0>
+				asm("bx r3\n");
+			} else {
+				start = now;
+			}
+		}
+	}
+  20021a:	46c0      	nop			; (mov r8, r8)
+	WORD start = (SWORD)PWM_CH_COUNTER(0);
+
+	i=0;
+	for(;;) {
+
+		WORD now = (SWORD)PWM_CH_COUNTER(0);
+  20021c:	4b35      	ldr	r3, [pc, #212]	; (2002f4 <Bootrom+0x188>)
+  20021e:	681a      	ldr	r2, [r3, #0]
+  200220:	1c3b      	adds	r3, r7, #0
+  200222:	801a      	strh	r2, [r3, #0]
+
+		if(UsbPoll()) {
+  200224:	f000 fb42 	bl	2008ac <UsbPoll>
+  200228:	1c03      	adds	r3, r0, #0
+  20022a:	d003      	beq.n	200234 <Bootrom+0xc8>
+			// It did something; reset the clock that would jump us to the
+			// applications.
+			start = now;
+  20022c:	1cbb      	adds	r3, r7, #2
+  20022e:	1c3a      	adds	r2, r7, #0
+  200230:	8812      	ldrh	r2, [r2, #0]
+  200232:	801a      	strh	r2, [r3, #0]
+		}
+
+		WDT_HIT();
+  200234:	4b30      	ldr	r3, [pc, #192]	; (2002f8 <Bootrom+0x18c>)
+  200236:	4a31      	ldr	r2, [pc, #196]	; (2002fc <Bootrom+0x190>)
+  200238:	601a      	str	r2, [r3, #0]
+		if((SWORD)(now - start) > 30000) {
+  20023a:	1c3a      	adds	r2, r7, #0
+  20023c:	1cbb      	adds	r3, r7, #2
+  20023e:	8812      	ldrh	r2, [r2, #0]
+  200240:	881b      	ldrh	r3, [r3, #0]
+  200242:	1ad3      	subs	r3, r2, r3
+  200244:	041b      	lsls	r3, r3, #16
+  200246:	0c1b      	lsrs	r3, r3, #16
+  200248:	041b      	lsls	r3, r3, #16
+  20024a:	0c1b      	lsrs	r3, r3, #16
+  20024c:	041b      	lsls	r3, r3, #16
+  20024e:	141b      	asrs	r3, r3, #16
+  200250:	4a2b      	ldr	r2, [pc, #172]	; (200300 <Bootrom+0x194>)
+  200252:	4293      	cmp	r3, r2
+  200254:	dde1      	ble.n	20021a <Bootrom+0xae>
+			i=i+1;
+  200256:	687b      	ldr	r3, [r7, #4]
+  200258:	3301      	adds	r3, #1
+  20025a:	607b      	str	r3, [r7, #4]
+			if (i&1) LED_OFF();
+  20025c:	687a      	ldr	r2, [r7, #4]
+  20025e:	2301      	movs	r3, #1
+  200260:	4013      	ands	r3, r2
+  200262:	061b      	lsls	r3, r3, #24
+  200264:	0e1b      	lsrs	r3, r3, #24
+  200266:	d004      	beq.n	200272 <Bootrom+0x106>
+  200268:	4b18      	ldr	r3, [pc, #96]	; (2002cc <Bootrom+0x160>)
+  20026a:	2280      	movs	r2, #128	; 0x80
+  20026c:	0612      	lsls	r2, r2, #24
+  20026e:	601a      	str	r2, [r3, #0]
+  200270:	e003      	b.n	20027a <Bootrom+0x10e>
+			else LED_ON();
+  200272:	4b15      	ldr	r3, [pc, #84]	; (2002c8 <Bootrom+0x15c>)
+  200274:	2280      	movs	r2, #128	; 0x80
+  200276:	0612      	lsls	r2, r2, #24
+  200278:	601a      	str	r2, [r3, #0]
+
+			// you may increase the number below if the enumeration process
+			// in Windows is longer and the downloader does not work...)
+			if (i>10) { //after ~5sec or no keypress
+  20027a:	687b      	ldr	r3, [r7, #4]
+  20027c:	2b0a      	cmp	r3, #10
+  20027e:	dd11      	ble.n	2002a4 <Bootrom+0x138>
+  200280:	e000      	b.n	200284 <Bootrom+0x118>
+	USB_D_PLUS_PULLUP_OFF();
+
+
+	for(i = 0; i < 1000000; i++) LED_OFF(); // delay a bit, before testing the key
+
+	if (PIO_PIN_DATA_STATUS&(1<<GPIO_KEY)) goto run_flash;
+  200282:	46c0      	nop			; (mov r8, r8)
+
+			// you may increase the number below if the enumeration process
+			// in Windows is longer and the downloader does not work...)
+			if (i>10) { //after ~5sec or no keypress
+run_flash:
+				USB_D_PLUS_PULLUP_OFF();
+  200284:	4b11      	ldr	r3, [pc, #68]	; (2002cc <Bootrom+0x160>)
+  200286:	2280      	movs	r2, #128	; 0x80
+  200288:	0252      	lsls	r2, r2, #9
+  20028a:	601a      	str	r2, [r3, #0]
+  20028c:	4b09      	ldr	r3, [pc, #36]	; (2002b4 <Bootrom+0x148>)
+  20028e:	2280      	movs	r2, #128	; 0x80
+  200290:	0252      	lsls	r2, r2, #9
+  200292:	601a      	str	r2, [r3, #0]
+				LED_OFF();
+  200294:	4b0d      	ldr	r3, [pc, #52]	; (2002cc <Bootrom+0x160>)
+  200296:	2280      	movs	r2, #128	; 0x80
+  200298:	0612      	lsls	r2, r2, #24
+  20029a:	601a      	str	r2, [r3, #0]
+				// I would have thought that I could write this as a cast to
+				// a function pointer and a call, but I can't seem to get that
+				// to work. I also can't figure out how to make the assembler
+				// load pc relative a constant in flash, thus the ugly way
+				// to specify the address.
+				asm("mov r3, #129\n");
+  20029c:	2381      	movs	r3, #129	; 0x81
+				asm("lsl r3, r3, #13\n");
+  20029e:	035b      	lsls	r3, r3, #13
+				//asm("mov r4, #1\n");  // we don't need this!
+				//asm("orr r3, r4\n");
+				asm("bx r3\n");
+  2002a0:	4718      	bx	r3
+			} else {
+				start = now;
+			}
+		}
+	}
+  2002a2:	e7ba      	b.n	20021a <Bootrom+0xae>
+				asm("lsl r3, r3, #13\n");
+				//asm("mov r4, #1\n");  // we don't need this!
+				//asm("orr r3, r4\n");
+				asm("bx r3\n");
+			} else {
+				start = now;
+  2002a4:	1cbb      	adds	r3, r7, #2
+  2002a6:	1c3a      	adds	r2, r7, #0
+  2002a8:	8812      	ldrh	r2, [r2, #0]
+  2002aa:	801a      	strh	r2, [r3, #0]
+			}
+		}
+	}
+  2002ac:	e7b5      	b.n	20021a <Bootrom+0xae>
+  2002ae:	46c0      	nop			; (mov r8, r8)
+  2002b0:	fffff460 	.word	0xfffff460
+  2002b4:	fffff410 	.word	0xfffff410
+  2002b8:	80010000 	.word	0x80010000
+  2002bc:	fffff400 	.word	0xfffff400
+  2002c0:	80010001 	.word	0x80010001
+  2002c4:	fffff420 	.word	0xfffff420
+  2002c8:	fffff434 	.word	0xfffff434
+  2002cc:	fffff430 	.word	0xfffff430
+  2002d0:	000f423f 	.word	0x000f423f
+  2002d4:	fffff43c 	.word	0xfffff43c
+  2002d8:	fffffd44 	.word	0xfffffd44
+  2002dc:	00300100 	.word	0x00300100
+  2002e0:	fffcc004 	.word	0xfffcc004
+  2002e4:	fffcc200 	.word	0xfffcc200
+  2002e8:	fffcc204 	.word	0xfffcc204
+  2002ec:	fffcc208 	.word	0xfffcc208
+  2002f0:	0000ffff 	.word	0x0000ffff
+  2002f4:	fffcc20c 	.word	0xfffcc20c
+  2002f8:	fffffd40 	.word	0xfffffd40
+  2002fc:	a5000001 	.word	0xa5000001
+  200300:	00007530 	.word	0x00007530
+
+00200304 <UsbSendEp0>:
+//-----------------------------------------------------------------------------
+// Send a packet over EP0. This blocks until the packet has been transmitted
+// and an ACK from the host has been received.
+//-----------------------------------------------------------------------------
+static void UsbSendEp0(const BYTE *data, int len)
+{
+  200304:	b580      	push	{r7, lr}
+  200306:	b084      	sub	sp, #16
+  200308:	af00      	add	r7, sp, #0
+  20030a:	6078      	str	r0, [r7, #4]
+  20030c:	6039      	str	r1, [r7, #0]
+    int thisTime, i;
+
+    do {
+        thisTime = min(len, 8);
+  20030e:	683b      	ldr	r3, [r7, #0]
+  200310:	2b08      	cmp	r3, #8
+  200312:	dd00      	ble.n	200316 <UsbSendEp0+0x12>
+  200314:	2308      	movs	r3, #8
+  200316:	60bb      	str	r3, [r7, #8]
+        len -= thisTime;
+  200318:	683a      	ldr	r2, [r7, #0]
+  20031a:	68bb      	ldr	r3, [r7, #8]
+  20031c:	1ad3      	subs	r3, r2, r3
+  20031e:	603b      	str	r3, [r7, #0]
+
+        for(i = 0; i < thisTime; i++) {
+  200320:	2300      	movs	r3, #0
+  200322:	60fb      	str	r3, [r7, #12]
+  200324:	e009      	b.n	20033a <UsbSendEp0+0x36>
+            UDP_ENDPOINT_FIFO(0) = *data;
+  200326:	4b2d      	ldr	r3, [pc, #180]	; (2003dc <UsbSendEp0+0xd8>)
+  200328:	687a      	ldr	r2, [r7, #4]
+  20032a:	7812      	ldrb	r2, [r2, #0]
+  20032c:	601a      	str	r2, [r3, #0]
+            data++;
+  20032e:	687b      	ldr	r3, [r7, #4]
+  200330:	3301      	adds	r3, #1
+  200332:	607b      	str	r3, [r7, #4]
+
+    do {
+        thisTime = min(len, 8);
+        len -= thisTime;
+
+        for(i = 0; i < thisTime; i++) {
+  200334:	68fb      	ldr	r3, [r7, #12]
+  200336:	3301      	adds	r3, #1
+  200338:	60fb      	str	r3, [r7, #12]
+  20033a:	68fa      	ldr	r2, [r7, #12]
+  20033c:	68bb      	ldr	r3, [r7, #8]
+  20033e:	429a      	cmp	r2, r3
+  200340:	dbf1      	blt.n	200326 <UsbSendEp0+0x22>
+            UDP_ENDPOINT_FIFO(0) = *data;
+            data++;
+        }
+
+        if(UDP_ENDPOINT_CSR(0) & UDP_CSR_TX_PACKET_ACKED) {
+  200342:	4b27      	ldr	r3, [pc, #156]	; (2003e0 <UsbSendEp0+0xdc>)
+  200344:	681b      	ldr	r3, [r3, #0]
+  200346:	1c1a      	adds	r2, r3, #0
+  200348:	2301      	movs	r3, #1
+  20034a:	4013      	ands	r3, r2
+  20034c:	061b      	lsls	r3, r3, #24
+  20034e:	0e1b      	lsrs	r3, r3, #24
+  200350:	d00e      	beq.n	200370 <UsbSendEp0+0x6c>
+            UDP_ENDPOINT_CSR(0) &= ~UDP_CSR_TX_PACKET_ACKED;
+  200352:	4b23      	ldr	r3, [pc, #140]	; (2003e0 <UsbSendEp0+0xdc>)
+  200354:	4a22      	ldr	r2, [pc, #136]	; (2003e0 <UsbSendEp0+0xdc>)
+  200356:	6812      	ldr	r2, [r2, #0]
+  200358:	2101      	movs	r1, #1
+  20035a:	438a      	bics	r2, r1
+  20035c:	601a      	str	r2, [r3, #0]
+            while(UDP_ENDPOINT_CSR(0) & UDP_CSR_TX_PACKET_ACKED)
+  20035e:	46c0      	nop			; (mov r8, r8)
+  200360:	4b1f      	ldr	r3, [pc, #124]	; (2003e0 <UsbSendEp0+0xdc>)
+  200362:	681b      	ldr	r3, [r3, #0]
+  200364:	1c1a      	adds	r2, r3, #0
+  200366:	2301      	movs	r3, #1
+  200368:	4013      	ands	r3, r2
+  20036a:	061b      	lsls	r3, r3, #24
+  20036c:	0e1b      	lsrs	r3, r3, #24
+  20036e:	d1f7      	bne.n	200360 <UsbSendEp0+0x5c>
+                ;
+        }
+
+        UDP_ENDPOINT_CSR(0) |= UDP_CSR_TX_PACKET;
+  200370:	4b1b      	ldr	r3, [pc, #108]	; (2003e0 <UsbSendEp0+0xdc>)
+  200372:	4a1b      	ldr	r2, [pc, #108]	; (2003e0 <UsbSendEp0+0xdc>)
+  200374:	6812      	ldr	r2, [r2, #0]
+  200376:	2110      	movs	r1, #16
+  200378:	430a      	orrs	r2, r1
+  20037a:	601a      	str	r2, [r3, #0]
+
+        do {
+            if(UDP_ENDPOINT_CSR(0) & UDP_CSR_RX_PACKET_RECEIVED_BANK_0) {
+  20037c:	4b18      	ldr	r3, [pc, #96]	; (2003e0 <UsbSendEp0+0xdc>)
+  20037e:	681a      	ldr	r2, [r3, #0]
+  200380:	2302      	movs	r3, #2
+  200382:	4013      	ands	r3, r2
+  200384:	d006      	beq.n	200394 <UsbSendEp0+0x90>
+                // This means that the host is trying to write to us, so
+                // abandon our write to them.
+                UDP_ENDPOINT_CSR(0) &= ~UDP_CSR_RX_PACKET_RECEIVED_BANK_0;
+  200386:	4b16      	ldr	r3, [pc, #88]	; (2003e0 <UsbSendEp0+0xdc>)
+  200388:	4a15      	ldr	r2, [pc, #84]	; (2003e0 <UsbSendEp0+0xdc>)
+  20038a:	6812      	ldr	r2, [r2, #0]
+  20038c:	2102      	movs	r1, #2
+  20038e:	438a      	bics	r2, r1
+  200390:	601a      	str	r2, [r3, #0]
+                return;
+  200392:	e01e      	b.n	2003d2 <UsbSendEp0+0xce>
+            }
+        } while(!(UDP_ENDPOINT_CSR(0) & UDP_CSR_TX_PACKET_ACKED));
+  200394:	4b12      	ldr	r3, [pc, #72]	; (2003e0 <UsbSendEp0+0xdc>)
+  200396:	681a      	ldr	r2, [r3, #0]
+  200398:	2301      	movs	r3, #1
+  20039a:	4013      	ands	r3, r2
+  20039c:	d0ee      	beq.n	20037c <UsbSendEp0+0x78>
+    } while(len > 0);
+  20039e:	683b      	ldr	r3, [r7, #0]
+  2003a0:	2b00      	cmp	r3, #0
+  2003a2:	dcb4      	bgt.n	20030e <UsbSendEp0+0xa>
+
+    if(UDP_ENDPOINT_CSR(0) & UDP_CSR_TX_PACKET_ACKED) {
+  2003a4:	4b0e      	ldr	r3, [pc, #56]	; (2003e0 <UsbSendEp0+0xdc>)
+  2003a6:	681b      	ldr	r3, [r3, #0]
+  2003a8:	1c1a      	adds	r2, r3, #0
+  2003aa:	2301      	movs	r3, #1
+  2003ac:	4013      	ands	r3, r2
+  2003ae:	061b      	lsls	r3, r3, #24
+  2003b0:	0e1b      	lsrs	r3, r3, #24
+  2003b2:	d00e      	beq.n	2003d2 <UsbSendEp0+0xce>
+        UDP_ENDPOINT_CSR(0) &= ~UDP_CSR_TX_PACKET_ACKED;
+  2003b4:	4b0a      	ldr	r3, [pc, #40]	; (2003e0 <UsbSendEp0+0xdc>)
+  2003b6:	4a0a      	ldr	r2, [pc, #40]	; (2003e0 <UsbSendEp0+0xdc>)
+  2003b8:	6812      	ldr	r2, [r2, #0]
+  2003ba:	2101      	movs	r1, #1
+  2003bc:	438a      	bics	r2, r1
+  2003be:	601a      	str	r2, [r3, #0]
+        while(UDP_ENDPOINT_CSR(0) & UDP_CSR_TX_PACKET_ACKED)
+  2003c0:	46c0      	nop			; (mov r8, r8)
+  2003c2:	4b07      	ldr	r3, [pc, #28]	; (2003e0 <UsbSendEp0+0xdc>)
+  2003c4:	681b      	ldr	r3, [r3, #0]
+  2003c6:	1c1a      	adds	r2, r3, #0
+  2003c8:	2301      	movs	r3, #1
+  2003ca:	4013      	ands	r3, r2
+  2003cc:	061b      	lsls	r3, r3, #24
+  2003ce:	0e1b      	lsrs	r3, r3, #24
+  2003d0:	d1f7      	bne.n	2003c2 <UsbSendEp0+0xbe>
+            ;
+    }
+}
+  2003d2:	46bd      	mov	sp, r7
+  2003d4:	b004      	add	sp, #16
+  2003d6:	bc80      	pop	{r7}
+  2003d8:	bc01      	pop	{r0}
+  2003da:	4700      	bx	r0
+  2003dc:	fffb0050 	.word	0xfffb0050
+  2003e0:	fffb0030 	.word	0xfffb0030
+
+002003e4 <UsbSendZeroLength>:
+//-----------------------------------------------------------------------------
+// Send a zero-length packet on EP0. This blocks until the packet has been
+// transmitted and an ACK from the host has been received.
+//-----------------------------------------------------------------------------
+static void UsbSendZeroLength(void)
+{
+  2003e4:	b580      	push	{r7, lr}
+  2003e6:	af00      	add	r7, sp, #0
+    UDP_ENDPOINT_CSR(0) |= UDP_CSR_TX_PACKET;
+  2003e8:	4b0f      	ldr	r3, [pc, #60]	; (200428 <UsbSendZeroLength+0x44>)
+  2003ea:	4a0f      	ldr	r2, [pc, #60]	; (200428 <UsbSendZeroLength+0x44>)
+  2003ec:	6812      	ldr	r2, [r2, #0]
+  2003ee:	2110      	movs	r1, #16
+  2003f0:	430a      	orrs	r2, r1
+  2003f2:	601a      	str	r2, [r3, #0]
+
+    while(!(UDP_ENDPOINT_CSR(0) & UDP_CSR_TX_PACKET_ACKED))
+  2003f4:	46c0      	nop			; (mov r8, r8)
+  2003f6:	4b0c      	ldr	r3, [pc, #48]	; (200428 <UsbSendZeroLength+0x44>)
+  2003f8:	681a      	ldr	r2, [r3, #0]
+  2003fa:	2301      	movs	r3, #1
+  2003fc:	4013      	ands	r3, r2
+  2003fe:	d0fa      	beq.n	2003f6 <UsbSendZeroLength+0x12>
+        ;
+
+    UDP_ENDPOINT_CSR(0) &= ~UDP_CSR_TX_PACKET_ACKED;
+  200400:	4b09      	ldr	r3, [pc, #36]	; (200428 <UsbSendZeroLength+0x44>)
+  200402:	4a09      	ldr	r2, [pc, #36]	; (200428 <UsbSendZeroLength+0x44>)
+  200404:	6812      	ldr	r2, [r2, #0]
+  200406:	2101      	movs	r1, #1
+  200408:	438a      	bics	r2, r1
+  20040a:	601a      	str	r2, [r3, #0]
+
+    while(UDP_ENDPOINT_CSR(0) & UDP_CSR_TX_PACKET_ACKED)
+  20040c:	46c0      	nop			; (mov r8, r8)
+  20040e:	4b06      	ldr	r3, [pc, #24]	; (200428 <UsbSendZeroLength+0x44>)
+  200410:	681b      	ldr	r3, [r3, #0]
+  200412:	1c1a      	adds	r2, r3, #0
+  200414:	2301      	movs	r3, #1
+  200416:	4013      	ands	r3, r2
+  200418:	061b      	lsls	r3, r3, #24
+  20041a:	0e1b      	lsrs	r3, r3, #24
+  20041c:	d1f7      	bne.n	20040e <UsbSendZeroLength+0x2a>
+        ;
+}
+  20041e:	46bd      	mov	sp, r7
+  200420:	bc80      	pop	{r7}
+  200422:	bc01      	pop	{r0}
+  200424:	4700      	bx	r0
+  200426:	46c0      	nop			; (mov r8, r8)
+  200428:	fffb0030 	.word	0xfffb0030
+
+0020042c <HandleRxdSetupData>:
+// Handle a received SETUP DATA packet. These are the packets used to
+// configure the link (e.g. request various descriptors, and assign our
+// address).
+//-----------------------------------------------------------------------------
+static void HandleRxdSetupData(void)
+{
+  20042c:	b580      	push	{r7, lr}
+  20042e:	b086      	sub	sp, #24
+  200430:	af00      	add	r7, sp, #0
+    int i;
+    UsbSetupData usd;
+
+    for(i = 0; i < sizeof(usd); i++) {
+  200432:	2300      	movs	r3, #0
+  200434:	617b      	str	r3, [r7, #20]
+  200436:	e00b      	b.n	200450 <HandleRxdSetupData+0x24>
+        ((BYTE *)&usd)[i] = UDP_ENDPOINT_FIFO(0);
+  200438:	697b      	ldr	r3, [r7, #20]
+  20043a:	1c3a      	adds	r2, r7, #0
+  20043c:	3208      	adds	r2, #8
+  20043e:	18d2      	adds	r2, r2, r3
+  200440:	4b86      	ldr	r3, [pc, #536]	; (20065c <HandleRxdSetupData+0x230>)
+  200442:	681b      	ldr	r3, [r3, #0]
+  200444:	061b      	lsls	r3, r3, #24
+  200446:	0e1b      	lsrs	r3, r3, #24
+  200448:	7013      	strb	r3, [r2, #0]
+static void HandleRxdSetupData(void)
+{
+    int i;
+    UsbSetupData usd;
+
+    for(i = 0; i < sizeof(usd); i++) {
+  20044a:	697b      	ldr	r3, [r7, #20]
+  20044c:	3301      	adds	r3, #1
+  20044e:	617b      	str	r3, [r7, #20]
+  200450:	697b      	ldr	r3, [r7, #20]
+  200452:	2b07      	cmp	r3, #7
+  200454:	d9f0      	bls.n	200438 <HandleRxdSetupData+0xc>
+        ((BYTE *)&usd)[i] = UDP_ENDPOINT_FIFO(0);
+    }
+
+    if(usd.bmRequestType & 0x80) {
+  200456:	1c3b      	adds	r3, r7, #0
+  200458:	3308      	adds	r3, #8
+  20045a:	781b      	ldrb	r3, [r3, #0]
+  20045c:	061b      	lsls	r3, r3, #24
+  20045e:	0e1b      	lsrs	r3, r3, #24
+  200460:	061b      	lsls	r3, r3, #24
+  200462:	161b      	asrs	r3, r3, #24
+  200464:	d50b      	bpl.n	20047e <HandleRxdSetupData+0x52>
+        UDP_ENDPOINT_CSR(0) |= UDP_CSR_CONTROL_DATA_DIR;
+  200466:	4b7e      	ldr	r3, [pc, #504]	; (200660 <HandleRxdSetupData+0x234>)
+  200468:	4a7d      	ldr	r2, [pc, #500]	; (200660 <HandleRxdSetupData+0x234>)
+  20046a:	6812      	ldr	r2, [r2, #0]
+  20046c:	2180      	movs	r1, #128	; 0x80
+  20046e:	430a      	orrs	r2, r1
+  200470:	601a      	str	r2, [r3, #0]
+        while(!(UDP_ENDPOINT_CSR(0) & UDP_CSR_CONTROL_DATA_DIR))
+  200472:	46c0      	nop			; (mov r8, r8)
+  200474:	4b7a      	ldr	r3, [pc, #488]	; (200660 <HandleRxdSetupData+0x234>)
+  200476:	681a      	ldr	r2, [r3, #0]
+  200478:	2380      	movs	r3, #128	; 0x80
+  20047a:	4013      	ands	r3, r2
+  20047c:	d0fa      	beq.n	200474 <HandleRxdSetupData+0x48>
+            ;
+    }
+
+    UDP_ENDPOINT_CSR(0) &= ~UDP_CSR_RX_HAVE_READ_SETUP_DATA;
+  20047e:	4b78      	ldr	r3, [pc, #480]	; (200660 <HandleRxdSetupData+0x234>)
+  200480:	4a77      	ldr	r2, [pc, #476]	; (200660 <HandleRxdSetupData+0x234>)
+  200482:	6812      	ldr	r2, [r2, #0]
+  200484:	2104      	movs	r1, #4
+  200486:	438a      	bics	r2, r1
+  200488:	601a      	str	r2, [r3, #0]
+    while(UDP_ENDPOINT_CSR(0) & UDP_CSR_RX_HAVE_READ_SETUP_DATA)
+  20048a:	46c0      	nop			; (mov r8, r8)
+  20048c:	4b74      	ldr	r3, [pc, #464]	; (200660 <HandleRxdSetupData+0x234>)
+  20048e:	681a      	ldr	r2, [r3, #0]
+  200490:	2304      	movs	r3, #4
+  200492:	4013      	ands	r3, r2
+  200494:	d1fa      	bne.n	20048c <HandleRxdSetupData+0x60>
+        ;
+
+    switch(usd.bRequest) {
+  200496:	1c3b      	adds	r3, r7, #0
+  200498:	3308      	adds	r3, #8
+  20049a:	785b      	ldrb	r3, [r3, #1]
+  20049c:	2b0b      	cmp	r3, #11
+  20049e:	d900      	bls.n	2004a2 <HandleRxdSetupData+0x76>
+  2004a0:	e0d2      	b.n	200648 <HandleRxdSetupData+0x21c>
+  2004a2:	009a      	lsls	r2, r3, #2
+  2004a4:	4b6f      	ldr	r3, [pc, #444]	; (200664 <HandleRxdSetupData+0x238>)
+  2004a6:	18d3      	adds	r3, r2, r3
+  2004a8:	681b      	ldr	r3, [r3, #0]
+  2004aa:	469f      	mov	pc, r3
+        case USB_REQUEST_GET_DESCRIPTOR:
+            if((usd.wValue >> 8) == USB_DESCRIPTOR_TYPE_DEVICE) {
+  2004ac:	1c3b      	adds	r3, r7, #0
+  2004ae:	3308      	adds	r3, #8
+  2004b0:	885b      	ldrh	r3, [r3, #2]
+  2004b2:	0a1b      	lsrs	r3, r3, #8
+  2004b4:	041b      	lsls	r3, r3, #16
+  2004b6:	0c1b      	lsrs	r3, r3, #16
+  2004b8:	2b01      	cmp	r3, #1
+  2004ba:	d10f      	bne.n	2004dc <HandleRxdSetupData+0xb0>
+                UsbSendEp0((BYTE *)&DeviceDescriptor,
+                    min(sizeof(DeviceDescriptor), usd.wLength));
+  2004bc:	1c3b      	adds	r3, r7, #0
+  2004be:	3308      	adds	r3, #8
+  2004c0:	88db      	ldrh	r3, [r3, #6]
+        ;
+
+    switch(usd.bRequest) {
+        case USB_REQUEST_GET_DESCRIPTOR:
+            if((usd.wValue >> 8) == USB_DESCRIPTOR_TYPE_DEVICE) {
+                UsbSendEp0((BYTE *)&DeviceDescriptor,
+  2004c2:	2b11      	cmp	r3, #17
+  2004c4:	d803      	bhi.n	2004ce <HandleRxdSetupData+0xa2>
+                    min(sizeof(DeviceDescriptor), usd.wLength));
+  2004c6:	1c3b      	adds	r3, r7, #0
+  2004c8:	3308      	adds	r3, #8
+  2004ca:	88db      	ldrh	r3, [r3, #6]
+  2004cc:	e000      	b.n	2004d0 <HandleRxdSetupData+0xa4>
+        ;
+
+    switch(usd.bRequest) {
+        case USB_REQUEST_GET_DESCRIPTOR:
+            if((usd.wValue >> 8) == USB_DESCRIPTOR_TYPE_DEVICE) {
+                UsbSendEp0((BYTE *)&DeviceDescriptor,
+  2004ce:	2312      	movs	r3, #18
+  2004d0:	4a65      	ldr	r2, [pc, #404]	; (200668 <HandleRxdSetupData+0x23c>)
+  2004d2:	1c10      	adds	r0, r2, #0
+  2004d4:	1c19      	adds	r1, r3, #0
+  2004d6:	f7ff ff15 	bl	200304 <UsbSendEp0>
+                UsbSendEp0(s, min(s[0], usd.wLength));
+            } else if((usd.wValue >> 8) == USB_DESCRIPTOR_TYPE_HID_REPORT) {
+                UsbSendEp0((BYTE *)&HidReportDescriptor,
+                    min(sizeof(HidReportDescriptor), usd.wLength));
+            }
+            break;
+  2004da:	e0b7      	b.n	20064c <HandleRxdSetupData+0x220>
+    switch(usd.bRequest) {
+        case USB_REQUEST_GET_DESCRIPTOR:
+            if((usd.wValue >> 8) == USB_DESCRIPTOR_TYPE_DEVICE) {
+                UsbSendEp0((BYTE *)&DeviceDescriptor,
+                    min(sizeof(DeviceDescriptor), usd.wLength));
+            } else if((usd.wValue >> 8) == USB_DESCRIPTOR_TYPE_CONFIGURATION) {
+  2004dc:	1c3b      	adds	r3, r7, #0
+  2004de:	3308      	adds	r3, #8
+  2004e0:	885b      	ldrh	r3, [r3, #2]
+  2004e2:	0a1b      	lsrs	r3, r3, #8
+  2004e4:	041b      	lsls	r3, r3, #16
+  2004e6:	0c1b      	lsrs	r3, r3, #16
+  2004e8:	2b02      	cmp	r3, #2
+  2004ea:	d10f      	bne.n	20050c <HandleRxdSetupData+0xe0>
+                UsbSendEp0((BYTE *)&ConfigurationDescriptor,
+                    min(sizeof(ConfigurationDescriptor), usd.wLength));
+  2004ec:	1c3b      	adds	r3, r7, #0
+  2004ee:	3308      	adds	r3, #8
+  2004f0:	88db      	ldrh	r3, [r3, #6]
+        case USB_REQUEST_GET_DESCRIPTOR:
+            if((usd.wValue >> 8) == USB_DESCRIPTOR_TYPE_DEVICE) {
+                UsbSendEp0((BYTE *)&DeviceDescriptor,
+                    min(sizeof(DeviceDescriptor), usd.wLength));
+            } else if((usd.wValue >> 8) == USB_DESCRIPTOR_TYPE_CONFIGURATION) {
+                UsbSendEp0((BYTE *)&ConfigurationDescriptor,
+  2004f2:	2b28      	cmp	r3, #40	; 0x28
+  2004f4:	d803      	bhi.n	2004fe <HandleRxdSetupData+0xd2>
+                    min(sizeof(ConfigurationDescriptor), usd.wLength));
+  2004f6:	1c3b      	adds	r3, r7, #0
+  2004f8:	3308      	adds	r3, #8
+  2004fa:	88db      	ldrh	r3, [r3, #6]
+  2004fc:	e000      	b.n	200500 <HandleRxdSetupData+0xd4>
+        case USB_REQUEST_GET_DESCRIPTOR:
+            if((usd.wValue >> 8) == USB_DESCRIPTOR_TYPE_DEVICE) {
+                UsbSendEp0((BYTE *)&DeviceDescriptor,
+                    min(sizeof(DeviceDescriptor), usd.wLength));
+            } else if((usd.wValue >> 8) == USB_DESCRIPTOR_TYPE_CONFIGURATION) {
+                UsbSendEp0((BYTE *)&ConfigurationDescriptor,
+  2004fe:	2329      	movs	r3, #41	; 0x29
+  200500:	4a5a      	ldr	r2, [pc, #360]	; (20066c <HandleRxdSetupData+0x240>)
+  200502:	1c10      	adds	r0, r2, #0
+  200504:	1c19      	adds	r1, r3, #0
+  200506:	f7ff fefd 	bl	200304 <UsbSendEp0>
+                UsbSendEp0(s, min(s[0], usd.wLength));
+            } else if((usd.wValue >> 8) == USB_DESCRIPTOR_TYPE_HID_REPORT) {
+                UsbSendEp0((BYTE *)&HidReportDescriptor,
+                    min(sizeof(HidReportDescriptor), usd.wLength));
+            }
+            break;
+  20050a:	e09f      	b.n	20064c <HandleRxdSetupData+0x220>
+                UsbSendEp0((BYTE *)&DeviceDescriptor,
+                    min(sizeof(DeviceDescriptor), usd.wLength));
+            } else if((usd.wValue >> 8) == USB_DESCRIPTOR_TYPE_CONFIGURATION) {
+                UsbSendEp0((BYTE *)&ConfigurationDescriptor,
+                    min(sizeof(ConfigurationDescriptor), usd.wLength));
+            } else if((usd.wValue >> 8) == USB_DESCRIPTOR_TYPE_STRING) {
+  20050c:	1c3b      	adds	r3, r7, #0
+  20050e:	3308      	adds	r3, #8
+  200510:	885b      	ldrh	r3, [r3, #2]
+  200512:	0a1b      	lsrs	r3, r3, #8
+  200514:	041b      	lsls	r3, r3, #16
+  200516:	0c1b      	lsrs	r3, r3, #16
+  200518:	2b03      	cmp	r3, #3
+  20051a:	d11d      	bne.n	200558 <HandleRxdSetupData+0x12c>
+                const BYTE *s = StringDescriptors[usd.wValue & 0xff];
+  20051c:	1c3b      	adds	r3, r7, #0
+  20051e:	3308      	adds	r3, #8
+  200520:	885b      	ldrh	r3, [r3, #2]
+  200522:	1c1a      	adds	r2, r3, #0
+  200524:	23ff      	movs	r3, #255	; 0xff
+  200526:	401a      	ands	r2, r3
+  200528:	4b51      	ldr	r3, [pc, #324]	; (200670 <HandleRxdSetupData+0x244>)
+  20052a:	0092      	lsls	r2, r2, #2
+  20052c:	58d3      	ldr	r3, [r2, r3]
+  20052e:	613b      	str	r3, [r7, #16]
+                UsbSendEp0(s, min(s[0], usd.wLength));
+  200530:	693b      	ldr	r3, [r7, #16]
+  200532:	781b      	ldrb	r3, [r3, #0]
+  200534:	1c3a      	adds	r2, r7, #0
+  200536:	3208      	adds	r2, #8
+  200538:	88d2      	ldrh	r2, [r2, #6]
+  20053a:	0419      	lsls	r1, r3, #16
+  20053c:	0c08      	lsrs	r0, r1, #16
+  20053e:	0411      	lsls	r1, r2, #16
+  200540:	0c09      	lsrs	r1, r1, #16
+  200542:	4288      	cmp	r0, r1
+  200544:	d900      	bls.n	200548 <HandleRxdSetupData+0x11c>
+  200546:	1c13      	adds	r3, r2, #0
+  200548:	041b      	lsls	r3, r3, #16
+  20054a:	0c1b      	lsrs	r3, r3, #16
+  20054c:	693a      	ldr	r2, [r7, #16]
+  20054e:	1c10      	adds	r0, r2, #0
+  200550:	1c19      	adds	r1, r3, #0
+  200552:	f7ff fed7 	bl	200304 <UsbSendEp0>
+            } else if((usd.wValue >> 8) == USB_DESCRIPTOR_TYPE_HID_REPORT) {
+                UsbSendEp0((BYTE *)&HidReportDescriptor,
+                    min(sizeof(HidReportDescriptor), usd.wLength));
+            }
+            break;
+  200556:	e079      	b.n	20064c <HandleRxdSetupData+0x220>
+                UsbSendEp0((BYTE *)&ConfigurationDescriptor,
+                    min(sizeof(ConfigurationDescriptor), usd.wLength));
+            } else if((usd.wValue >> 8) == USB_DESCRIPTOR_TYPE_STRING) {
+                const BYTE *s = StringDescriptors[usd.wValue & 0xff];
+                UsbSendEp0(s, min(s[0], usd.wLength));
+            } else if((usd.wValue >> 8) == USB_DESCRIPTOR_TYPE_HID_REPORT) {
+  200558:	1c3b      	adds	r3, r7, #0
+  20055a:	3308      	adds	r3, #8
+  20055c:	885b      	ldrh	r3, [r3, #2]
+  20055e:	0a1b      	lsrs	r3, r3, #8
+  200560:	041b      	lsls	r3, r3, #16
+  200562:	0c1b      	lsrs	r3, r3, #16
+  200564:	2b22      	cmp	r3, #34	; 0x22
+  200566:	d000      	beq.n	20056a <HandleRxdSetupData+0x13e>
+  200568:	e070      	b.n	20064c <HandleRxdSetupData+0x220>
+                UsbSendEp0((BYTE *)&HidReportDescriptor,
+                    min(sizeof(HidReportDescriptor), usd.wLength));
+  20056a:	1c3b      	adds	r3, r7, #0
+  20056c:	3308      	adds	r3, #8
+  20056e:	88db      	ldrh	r3, [r3, #6]
+                    min(sizeof(ConfigurationDescriptor), usd.wLength));
+            } else if((usd.wValue >> 8) == USB_DESCRIPTOR_TYPE_STRING) {
+                const BYTE *s = StringDescriptors[usd.wValue & 0xff];
+                UsbSendEp0(s, min(s[0], usd.wLength));
+            } else if((usd.wValue >> 8) == USB_DESCRIPTOR_TYPE_HID_REPORT) {
+                UsbSendEp0((BYTE *)&HidReportDescriptor,
+  200570:	2b33      	cmp	r3, #51	; 0x33
+  200572:	d803      	bhi.n	20057c <HandleRxdSetupData+0x150>
+                    min(sizeof(HidReportDescriptor), usd.wLength));
+  200574:	1c3b      	adds	r3, r7, #0
+  200576:	3308      	adds	r3, #8
+  200578:	88db      	ldrh	r3, [r3, #6]
+  20057a:	e000      	b.n	20057e <HandleRxdSetupData+0x152>
+                    min(sizeof(ConfigurationDescriptor), usd.wLength));
+            } else if((usd.wValue >> 8) == USB_DESCRIPTOR_TYPE_STRING) {
+                const BYTE *s = StringDescriptors[usd.wValue & 0xff];
+                UsbSendEp0(s, min(s[0], usd.wLength));
+            } else if((usd.wValue >> 8) == USB_DESCRIPTOR_TYPE_HID_REPORT) {
+                UsbSendEp0((BYTE *)&HidReportDescriptor,
+  20057c:	2334      	movs	r3, #52	; 0x34
+  20057e:	4a3d      	ldr	r2, [pc, #244]	; (200674 <HandleRxdSetupData+0x248>)
+  200580:	1c10      	adds	r0, r2, #0
+  200582:	1c19      	adds	r1, r3, #0
+  200584:	f7ff febe 	bl	200304 <UsbSendEp0>
+                    min(sizeof(HidReportDescriptor), usd.wLength));
+            }
+            break;
+  200588:	e060      	b.n	20064c <HandleRxdSetupData+0x220>
+
+        case USB_REQUEST_SET_ADDRESS:
+            UsbSendZeroLength();
+  20058a:	f7ff ff2b 	bl	2003e4 <UsbSendZeroLength>
+            UDP_FUNCTION_ADDR = UDP_FUNCTION_ADDR_ENABLED | usd.wValue ;
+  20058e:	4b3a      	ldr	r3, [pc, #232]	; (200678 <HandleRxdSetupData+0x24c>)
+  200590:	1c3a      	adds	r2, r7, #0
+  200592:	3208      	adds	r2, #8
+  200594:	8852      	ldrh	r2, [r2, #2]
+  200596:	2180      	movs	r1, #128	; 0x80
+  200598:	0049      	lsls	r1, r1, #1
+  20059a:	430a      	orrs	r2, r1
+  20059c:	0412      	lsls	r2, r2, #16
+  20059e:	0c12      	lsrs	r2, r2, #16
+  2005a0:	601a      	str	r2, [r3, #0]
+            if(usd.wValue != 0) {
+  2005a2:	1c3b      	adds	r3, r7, #0
+  2005a4:	3308      	adds	r3, #8
+  2005a6:	885b      	ldrh	r3, [r3, #2]
+  2005a8:	2b00      	cmp	r3, #0
+  2005aa:	d003      	beq.n	2005b4 <HandleRxdSetupData+0x188>
+                UDP_GLOBAL_STATE = UDP_GLOBAL_STATE_ADDRESSED;
+  2005ac:	4b33      	ldr	r3, [pc, #204]	; (20067c <HandleRxdSetupData+0x250>)
+  2005ae:	2201      	movs	r2, #1
+  2005b0:	601a      	str	r2, [r3, #0]
+            } else {
+                UDP_GLOBAL_STATE = 0;
+            }
+            break;
+  2005b2:	e04e      	b.n	200652 <HandleRxdSetupData+0x226>
+            UsbSendZeroLength();
+            UDP_FUNCTION_ADDR = UDP_FUNCTION_ADDR_ENABLED | usd.wValue ;
+            if(usd.wValue != 0) {
+                UDP_GLOBAL_STATE = UDP_GLOBAL_STATE_ADDRESSED;
+            } else {
+                UDP_GLOBAL_STATE = 0;
+  2005b4:	4b31      	ldr	r3, [pc, #196]	; (20067c <HandleRxdSetupData+0x250>)
+  2005b6:	2200      	movs	r2, #0
+  2005b8:	601a      	str	r2, [r3, #0]
+            }
+            break;
+  2005ba:	e04a      	b.n	200652 <HandleRxdSetupData+0x226>
+
+        case USB_REQUEST_GET_CONFIGURATION:
+            UsbSendEp0(&CurrentConfiguration, sizeof(CurrentConfiguration));
+  2005bc:	4b30      	ldr	r3, [pc, #192]	; (200680 <HandleRxdSetupData+0x254>)
+  2005be:	1c18      	adds	r0, r3, #0
+  2005c0:	2101      	movs	r1, #1
+  2005c2:	f7ff fe9f 	bl	200304 <UsbSendEp0>
+            break;
+  2005c6:	e044      	b.n	200652 <HandleRxdSetupData+0x226>
+
+        case USB_REQUEST_GET_STATUS: {
+            if(usd.bmRequestType & 0x80) {
+  2005c8:	1c3b      	adds	r3, r7, #0
+  2005ca:	3308      	adds	r3, #8
+  2005cc:	781b      	ldrb	r3, [r3, #0]
+  2005ce:	061b      	lsls	r3, r3, #24
+  2005d0:	0e1b      	lsrs	r3, r3, #24
+  2005d2:	061b      	lsls	r3, r3, #24
+  2005d4:	161b      	asrs	r3, r3, #24
+  2005d6:	d53b      	bpl.n	200650 <HandleRxdSetupData+0x224>
+                WORD w = 0;
+  2005d8:	1dbb      	adds	r3, r7, #6
+  2005da:	2200      	movs	r2, #0
+  2005dc:	801a      	strh	r2, [r3, #0]
+                UsbSendEp0((BYTE *)&w, sizeof(w));
+  2005de:	1dbb      	adds	r3, r7, #6
+  2005e0:	1c18      	adds	r0, r3, #0
+  2005e2:	2102      	movs	r1, #2
+  2005e4:	f7ff fe8e 	bl	200304 <UsbSendEp0>
+            }
+            break;
+  2005e8:	e032      	b.n	200650 <HandleRxdSetupData+0x224>
+        }
+        case USB_REQUEST_SET_CONFIGURATION:
+            CurrentConfiguration = usd.wValue;
+  2005ea:	1c3b      	adds	r3, r7, #0
+  2005ec:	3308      	adds	r3, #8
+  2005ee:	885b      	ldrh	r3, [r3, #2]
+  2005f0:	061b      	lsls	r3, r3, #24
+  2005f2:	0e1a      	lsrs	r2, r3, #24
+  2005f4:	4b22      	ldr	r3, [pc, #136]	; (200680 <HandleRxdSetupData+0x254>)
+  2005f6:	701a      	strb	r2, [r3, #0]
+            if(CurrentConfiguration) {
+  2005f8:	4b21      	ldr	r3, [pc, #132]	; (200680 <HandleRxdSetupData+0x254>)
+  2005fa:	781b      	ldrb	r3, [r3, #0]
+  2005fc:	2b00      	cmp	r3, #0
+  2005fe:	d00b      	beq.n	200618 <HandleRxdSetupData+0x1ec>
+                UDP_GLOBAL_STATE = UDP_GLOBAL_STATE_CONFIGURED;
+  200600:	4b1e      	ldr	r3, [pc, #120]	; (20067c <HandleRxdSetupData+0x250>)
+  200602:	2202      	movs	r2, #2
+  200604:	601a      	str	r2, [r3, #0]
+                UDP_ENDPOINT_CSR(1) = UDP_CSR_ENABLE_EP |
+  200606:	4b1f      	ldr	r3, [pc, #124]	; (200684 <HandleRxdSetupData+0x258>)
+  200608:	2283      	movs	r2, #131	; 0x83
+  20060a:	0212      	lsls	r2, r2, #8
+  20060c:	601a      	str	r2, [r3, #0]
+                    UDP_CSR_EPTYPE_INTERRUPT_OUT;
+                UDP_ENDPOINT_CSR(2) = UDP_CSR_ENABLE_EP |
+  20060e:	4b1e      	ldr	r3, [pc, #120]	; (200688 <HandleRxdSetupData+0x25c>)
+  200610:	2287      	movs	r2, #135	; 0x87
+  200612:	0212      	lsls	r2, r2, #8
+  200614:	601a      	str	r2, [r3, #0]
+  200616:	e008      	b.n	20062a <HandleRxdSetupData+0x1fe>
+                    UDP_CSR_EPTYPE_INTERRUPT_IN;
+            } else {
+                UDP_GLOBAL_STATE = UDP_GLOBAL_STATE_ADDRESSED;
+  200618:	4b18      	ldr	r3, [pc, #96]	; (20067c <HandleRxdSetupData+0x250>)
+  20061a:	2201      	movs	r2, #1
+  20061c:	601a      	str	r2, [r3, #0]
+                UDP_ENDPOINT_CSR(1) = 0;
+  20061e:	4b19      	ldr	r3, [pc, #100]	; (200684 <HandleRxdSetupData+0x258>)
+  200620:	2200      	movs	r2, #0
+  200622:	601a      	str	r2, [r3, #0]
+                UDP_ENDPOINT_CSR(2) = 0;
+  200624:	4b18      	ldr	r3, [pc, #96]	; (200688 <HandleRxdSetupData+0x25c>)
+  200626:	2200      	movs	r2, #0
+  200628:	601a      	str	r2, [r3, #0]
+            }
+            UsbSendZeroLength();
+  20062a:	f7ff fedb 	bl	2003e4 <UsbSendZeroLength>
+            break;
+  20062e:	e010      	b.n	200652 <HandleRxdSetupData+0x226>
+
+        case USB_REQUEST_GET_INTERFACE: {
+            BYTE b = 0;
+  200630:	1d7b      	adds	r3, r7, #5
+  200632:	2200      	movs	r2, #0
+  200634:	701a      	strb	r2, [r3, #0]
+            UsbSendEp0(&b, sizeof(b));
+  200636:	1d7b      	adds	r3, r7, #5
+  200638:	1c18      	adds	r0, r3, #0
+  20063a:	2101      	movs	r1, #1
+  20063c:	f7ff fe62 	bl	200304 <UsbSendEp0>
+            break;
+  200640:	e007      	b.n	200652 <HandleRxdSetupData+0x226>
+        }
+
+        case USB_REQUEST_SET_INTERFACE:
+            UsbSendZeroLength();
+  200642:	f7ff fecf 	bl	2003e4 <UsbSendZeroLength>
+            break;
+  200646:	e004      	b.n	200652 <HandleRxdSetupData+0x226>
+        case USB_REQUEST_CLEAR_FEATURE:
+        case USB_REQUEST_SET_FEATURE:
+        case USB_REQUEST_SET_DESCRIPTOR:
+        case USB_REQUEST_SYNC_FRAME:
+        default:
+            break;
+  200648:	46c0      	nop			; (mov r8, r8)
+  20064a:	e002      	b.n	200652 <HandleRxdSetupData+0x226>
+                UsbSendEp0(s, min(s[0], usd.wLength));
+            } else if((usd.wValue >> 8) == USB_DESCRIPTOR_TYPE_HID_REPORT) {
+                UsbSendEp0((BYTE *)&HidReportDescriptor,
+                    min(sizeof(HidReportDescriptor), usd.wLength));
+            }
+            break;
+  20064c:	46c0      	nop			; (mov r8, r8)
+  20064e:	e000      	b.n	200652 <HandleRxdSetupData+0x226>
+        case USB_REQUEST_GET_STATUS: {
+            if(usd.bmRequestType & 0x80) {
+                WORD w = 0;
+                UsbSendEp0((BYTE *)&w, sizeof(w));
+            }
+            break;
+  200650:	46c0      	nop			; (mov r8, r8)
+        case USB_REQUEST_SET_DESCRIPTOR:
+        case USB_REQUEST_SYNC_FRAME:
+        default:
+            break;
+    }
+}
+  200652:	46bd      	mov	sp, r7
+  200654:	b006      	add	sp, #24
+  200656:	bc80      	pop	{r7}
+  200658:	bc01      	pop	{r0}
+  20065a:	4700      	bx	r0
+  20065c:	fffb0050 	.word	0xfffb0050
+  200660:	fffb0030 	.word	0xfffb0030
+  200664:	00200a10 	.word	0x00200a10
+  200668:	00200994 	.word	0x00200994
+  20066c:	002009a8 	.word	0x002009a8
+  200670:	00200a04 	.word	0x00200a04
+  200674:	00200960 	.word	0x00200960
+  200678:	fffb0008 	.word	0xfffb0008
+  20067c:	fffb0004 	.word	0xfffb0004
+  200680:	00200a84 	.word	0x00200a84
+  200684:	fffb0034 	.word	0xfffb0034
+  200688:	fffb0038 	.word	0xfffb0038
+
+0020068c <UsbSendPacket>:
+// Send a data packet. This packet should be exactly USB_REPORT_PACKET_SIZE
+// long. This function blocks until the packet has been transmitted, and
+// an ACK has been received from the host.
+//-----------------------------------------------------------------------------
+void UsbSendPacket(BYTE *packet, int len)
+{
+  20068c:	b580      	push	{r7, lr}
+  20068e:	b084      	sub	sp, #16
+  200690:	af00      	add	r7, sp, #0
+  200692:	6078      	str	r0, [r7, #4]
+  200694:	6039      	str	r1, [r7, #0]
+    int i, thisTime;
+
+    while(len > 0) {
+  200696:	e037      	b.n	200708 <UsbSendPacket+0x7c>
+        thisTime = min(len, 8);
+  200698:	683b      	ldr	r3, [r7, #0]
+  20069a:	2b08      	cmp	r3, #8
+  20069c:	dd00      	ble.n	2006a0 <UsbSendPacket+0x14>
+  20069e:	2308      	movs	r3, #8
+  2006a0:	60bb      	str	r3, [r7, #8]
+       
+        for(i = 0; i < thisTime; i++) {
+  2006a2:	2300      	movs	r3, #0
+  2006a4:	60fb      	str	r3, [r7, #12]
+  2006a6:	e008      	b.n	2006ba <UsbSendPacket+0x2e>
+            UDP_ENDPOINT_FIFO(2) = packet[i];
+  2006a8:	4b1b      	ldr	r3, [pc, #108]	; (200718 <UsbSendPacket+0x8c>)
+  2006aa:	68fa      	ldr	r2, [r7, #12]
+  2006ac:	6879      	ldr	r1, [r7, #4]
+  2006ae:	188a      	adds	r2, r1, r2
+  2006b0:	7812      	ldrb	r2, [r2, #0]
+  2006b2:	601a      	str	r2, [r3, #0]
+    int i, thisTime;
+
+    while(len > 0) {
+        thisTime = min(len, 8);
+       
+        for(i = 0; i < thisTime; i++) {
+  2006b4:	68fb      	ldr	r3, [r7, #12]
+  2006b6:	3301      	adds	r3, #1
+  2006b8:	60fb      	str	r3, [r7, #12]
+  2006ba:	68fa      	ldr	r2, [r7, #12]
+  2006bc:	68bb      	ldr	r3, [r7, #8]
+  2006be:	429a      	cmp	r2, r3
+  2006c0:	dbf2      	blt.n	2006a8 <UsbSendPacket+0x1c>
+            UDP_ENDPOINT_FIFO(2) = packet[i];
+        }
+        UDP_ENDPOINT_CSR(2) |= UDP_CSR_TX_PACKET;
+  2006c2:	4b16      	ldr	r3, [pc, #88]	; (20071c <UsbSendPacket+0x90>)
+  2006c4:	4a15      	ldr	r2, [pc, #84]	; (20071c <UsbSendPacket+0x90>)
+  2006c6:	6812      	ldr	r2, [r2, #0]
+  2006c8:	2110      	movs	r1, #16
+  2006ca:	430a      	orrs	r2, r1
+  2006cc:	601a      	str	r2, [r3, #0]
+
+        while(!(UDP_ENDPOINT_CSR(2) & UDP_CSR_TX_PACKET_ACKED))
+  2006ce:	46c0      	nop			; (mov r8, r8)
+  2006d0:	4b12      	ldr	r3, [pc, #72]	; (20071c <UsbSendPacket+0x90>)
+  2006d2:	681a      	ldr	r2, [r3, #0]
+  2006d4:	2301      	movs	r3, #1
+  2006d6:	4013      	ands	r3, r2
+  2006d8:	d0fa      	beq.n	2006d0 <UsbSendPacket+0x44>
+            ;
+        UDP_ENDPOINT_CSR(2) &= ~UDP_CSR_TX_PACKET_ACKED;
+  2006da:	4b10      	ldr	r3, [pc, #64]	; (20071c <UsbSendPacket+0x90>)
+  2006dc:	4a0f      	ldr	r2, [pc, #60]	; (20071c <UsbSendPacket+0x90>)
+  2006de:	6812      	ldr	r2, [r2, #0]
+  2006e0:	2101      	movs	r1, #1
+  2006e2:	438a      	bics	r2, r1
+  2006e4:	601a      	str	r2, [r3, #0]
+
+        while(UDP_ENDPOINT_CSR(2) & UDP_CSR_TX_PACKET_ACKED)
+  2006e6:	46c0      	nop			; (mov r8, r8)
+  2006e8:	4b0c      	ldr	r3, [pc, #48]	; (20071c <UsbSendPacket+0x90>)
+  2006ea:	681b      	ldr	r3, [r3, #0]
+  2006ec:	1c1a      	adds	r2, r3, #0
+  2006ee:	2301      	movs	r3, #1
+  2006f0:	4013      	ands	r3, r2
+  2006f2:	061b      	lsls	r3, r3, #24
+  2006f4:	0e1b      	lsrs	r3, r3, #24
+  2006f6:	d1f7      	bne.n	2006e8 <UsbSendPacket+0x5c>
+            ;
+
+        len -= thisTime;
+  2006f8:	683a      	ldr	r2, [r7, #0]
+  2006fa:	68bb      	ldr	r3, [r7, #8]
+  2006fc:	1ad3      	subs	r3, r2, r3
+  2006fe:	603b      	str	r3, [r7, #0]
+        packet += thisTime;
+  200700:	68bb      	ldr	r3, [r7, #8]
+  200702:	687a      	ldr	r2, [r7, #4]
+  200704:	18d3      	adds	r3, r2, r3
+  200706:	607b      	str	r3, [r7, #4]
+//-----------------------------------------------------------------------------
+void UsbSendPacket(BYTE *packet, int len)
+{
+    int i, thisTime;
+
+    while(len > 0) {
+  200708:	683b      	ldr	r3, [r7, #0]
+  20070a:	2b00      	cmp	r3, #0
+  20070c:	dcc4      	bgt.n	200698 <UsbSendPacket+0xc>
+            ;
+
+        len -= thisTime;
+        packet += thisTime;
+    }
+}
+  20070e:	46bd      	mov	sp, r7
+  200710:	b004      	add	sp, #16
+  200712:	bc80      	pop	{r7}
+  200714:	bc01      	pop	{r0}
+  200716:	4700      	bx	r0
+  200718:	fffb0058 	.word	0xfffb0058
+  20071c:	fffb0038 	.word	0xfffb0038
+
+00200720 <HandleRxdData>:
+//-----------------------------------------------------------------------------
+// Handle a received packet. This handles only those packets received on
+// EP1 (i.e. the HID reports that we use as our data packets).
+//-----------------------------------------------------------------------------
+static void HandleRxdData(void)
+{
+  200720:	b580      	push	{r7, lr}
+  200722:	b082      	sub	sp, #8
+  200724:	af00      	add	r7, sp, #0
+    int i, len;
+
+    if(UDP_ENDPOINT_CSR(1) & UDP_CSR_RX_PACKET_RECEIVED_BANK_0) {
+  200726:	4b3e      	ldr	r3, [pc, #248]	; (200820 <HandleRxdData+0x100>)
+  200728:	681a      	ldr	r2, [r3, #0]
+  20072a:	2302      	movs	r3, #2
+  20072c:	4013      	ands	r3, r2
+  20072e:	d036      	beq.n	20079e <HandleRxdData+0x7e>
+        len = UDP_CSR_BYTES_RECEIVED(UDP_ENDPOINT_CSR(1));
+  200730:	4b3b      	ldr	r3, [pc, #236]	; (200820 <HandleRxdData+0x100>)
+  200732:	681b      	ldr	r3, [r3, #0]
+  200734:	0c1b      	lsrs	r3, r3, #16
+  200736:	055b      	lsls	r3, r3, #21
+  200738:	0d5b      	lsrs	r3, r3, #21
+  20073a:	603b      	str	r3, [r7, #0]
+
+        for(i = 0; i < len; i++) {
+  20073c:	2300      	movs	r3, #0
+  20073e:	607b      	str	r3, [r7, #4]
+  200740:	e00f      	b.n	200762 <HandleRxdData+0x42>
+            UsbBuffer[UsbSoFarCount] = UDP_ENDPOINT_FIFO(1);
+  200742:	4b38      	ldr	r3, [pc, #224]	; (200824 <HandleRxdData+0x104>)
+  200744:	681a      	ldr	r2, [r3, #0]
+  200746:	4b38      	ldr	r3, [pc, #224]	; (200828 <HandleRxdData+0x108>)
+  200748:	681b      	ldr	r3, [r3, #0]
+  20074a:	061b      	lsls	r3, r3, #24
+  20074c:	0e19      	lsrs	r1, r3, #24
+  20074e:	4b37      	ldr	r3, [pc, #220]	; (20082c <HandleRxdData+0x10c>)
+  200750:	5499      	strb	r1, [r3, r2]
+            UsbSoFarCount++;
+  200752:	4b34      	ldr	r3, [pc, #208]	; (200824 <HandleRxdData+0x104>)
+  200754:	681b      	ldr	r3, [r3, #0]
+  200756:	1c5a      	adds	r2, r3, #1
+  200758:	4b32      	ldr	r3, [pc, #200]	; (200824 <HandleRxdData+0x104>)
+  20075a:	601a      	str	r2, [r3, #0]
+    int i, len;
+
+    if(UDP_ENDPOINT_CSR(1) & UDP_CSR_RX_PACKET_RECEIVED_BANK_0) {
+        len = UDP_CSR_BYTES_RECEIVED(UDP_ENDPOINT_CSR(1));
+
+        for(i = 0; i < len; i++) {
+  20075c:	687b      	ldr	r3, [r7, #4]
+  20075e:	3301      	adds	r3, #1
+  200760:	607b      	str	r3, [r7, #4]
+  200762:	687a      	ldr	r2, [r7, #4]
+  200764:	683b      	ldr	r3, [r7, #0]
+  200766:	429a      	cmp	r2, r3
+  200768:	dbeb      	blt.n	200742 <HandleRxdData+0x22>
+            UsbBuffer[UsbSoFarCount] = UDP_ENDPOINT_FIFO(1);
+            UsbSoFarCount++;
+        }
+
+        UDP_ENDPOINT_CSR(1) &= ~UDP_CSR_RX_PACKET_RECEIVED_BANK_0;
+  20076a:	4b2d      	ldr	r3, [pc, #180]	; (200820 <HandleRxdData+0x100>)
+  20076c:	4a2c      	ldr	r2, [pc, #176]	; (200820 <HandleRxdData+0x100>)
+  20076e:	6812      	ldr	r2, [r2, #0]
+  200770:	2102      	movs	r1, #2
+  200772:	438a      	bics	r2, r1
+  200774:	601a      	str	r2, [r3, #0]
+        while(UDP_ENDPOINT_CSR(1) & UDP_CSR_RX_PACKET_RECEIVED_BANK_0)
+  200776:	46c0      	nop			; (mov r8, r8)
+  200778:	4b29      	ldr	r3, [pc, #164]	; (200820 <HandleRxdData+0x100>)
+  20077a:	681a      	ldr	r2, [r3, #0]
+  20077c:	2302      	movs	r3, #2
+  20077e:	4013      	ands	r3, r2
+  200780:	d1fa      	bne.n	200778 <HandleRxdData+0x58>
+            ;
+
+        if(UsbSoFarCount >= 64) {
+  200782:	4b28      	ldr	r3, [pc, #160]	; (200824 <HandleRxdData+0x104>)
+  200784:	681b      	ldr	r3, [r3, #0]
+  200786:	2b3f      	cmp	r3, #63	; 0x3f
+  200788:	dd09      	ble.n	20079e <HandleRxdData+0x7e>
+            UsbPacketReceived(UsbBuffer, UsbSoFarCount);
+  20078a:	4b26      	ldr	r3, [pc, #152]	; (200824 <HandleRxdData+0x104>)
+  20078c:	681b      	ldr	r3, [r3, #0]
+  20078e:	4a27      	ldr	r2, [pc, #156]	; (20082c <HandleRxdData+0x10c>)
+  200790:	1c10      	adds	r0, r2, #0
+  200792:	1c19      	adds	r1, r3, #0
+  200794:	f7ff fc7e 	bl	200094 <UsbPacketReceived>
+            UsbSoFarCount = 0;
+  200798:	4b22      	ldr	r3, [pc, #136]	; (200824 <HandleRxdData+0x104>)
+  20079a:	2200      	movs	r2, #0
+  20079c:	601a      	str	r2, [r3, #0]
+        }
+    }
+
+    if(UDP_ENDPOINT_CSR(1) & UDP_CSR_RX_PACKET_RECEIVED_BANK_1) {
+  20079e:	4b20      	ldr	r3, [pc, #128]	; (200820 <HandleRxdData+0x100>)
+  2007a0:	681a      	ldr	r2, [r3, #0]
+  2007a2:	2340      	movs	r3, #64	; 0x40
+  2007a4:	4013      	ands	r3, r2
+  2007a6:	d036      	beq.n	200816 <HandleRxdData+0xf6>
+        len = UDP_CSR_BYTES_RECEIVED(UDP_ENDPOINT_CSR(1));
+  2007a8:	4b1d      	ldr	r3, [pc, #116]	; (200820 <HandleRxdData+0x100>)
+  2007aa:	681b      	ldr	r3, [r3, #0]
+  2007ac:	0c1b      	lsrs	r3, r3, #16
+  2007ae:	055b      	lsls	r3, r3, #21
+  2007b0:	0d5b      	lsrs	r3, r3, #21
+  2007b2:	603b      	str	r3, [r7, #0]
+
+        for(i = 0; i < len; i++) {
+  2007b4:	2300      	movs	r3, #0
+  2007b6:	607b      	str	r3, [r7, #4]
+  2007b8:	e00f      	b.n	2007da <HandleRxdData+0xba>
+            UsbBuffer[UsbSoFarCount] = UDP_ENDPOINT_FIFO(1);
+  2007ba:	4b1a      	ldr	r3, [pc, #104]	; (200824 <HandleRxdData+0x104>)
+  2007bc:	681a      	ldr	r2, [r3, #0]
+  2007be:	4b1a      	ldr	r3, [pc, #104]	; (200828 <HandleRxdData+0x108>)
+  2007c0:	681b      	ldr	r3, [r3, #0]
+  2007c2:	061b      	lsls	r3, r3, #24
+  2007c4:	0e19      	lsrs	r1, r3, #24
+  2007c6:	4b19      	ldr	r3, [pc, #100]	; (20082c <HandleRxdData+0x10c>)
+  2007c8:	5499      	strb	r1, [r3, r2]
+            UsbSoFarCount++;
+  2007ca:	4b16      	ldr	r3, [pc, #88]	; (200824 <HandleRxdData+0x104>)
+  2007cc:	681b      	ldr	r3, [r3, #0]
+  2007ce:	1c5a      	adds	r2, r3, #1
+  2007d0:	4b14      	ldr	r3, [pc, #80]	; (200824 <HandleRxdData+0x104>)
+  2007d2:	601a      	str	r2, [r3, #0]
+    }
+
+    if(UDP_ENDPOINT_CSR(1) & UDP_CSR_RX_PACKET_RECEIVED_BANK_1) {
+        len = UDP_CSR_BYTES_RECEIVED(UDP_ENDPOINT_CSR(1));
+
+        for(i = 0; i < len; i++) {
+  2007d4:	687b      	ldr	r3, [r7, #4]
+  2007d6:	3301      	adds	r3, #1
+  2007d8:	607b      	str	r3, [r7, #4]
+  2007da:	687a      	ldr	r2, [r7, #4]
+  2007dc:	683b      	ldr	r3, [r7, #0]
+  2007de:	429a      	cmp	r2, r3
+  2007e0:	dbeb      	blt.n	2007ba <HandleRxdData+0x9a>
+            UsbBuffer[UsbSoFarCount] = UDP_ENDPOINT_FIFO(1);
+            UsbSoFarCount++;
+        }
+
+        UDP_ENDPOINT_CSR(1) &= ~UDP_CSR_RX_PACKET_RECEIVED_BANK_1;
+  2007e2:	4b0f      	ldr	r3, [pc, #60]	; (200820 <HandleRxdData+0x100>)
+  2007e4:	4a0e      	ldr	r2, [pc, #56]	; (200820 <HandleRxdData+0x100>)
+  2007e6:	6812      	ldr	r2, [r2, #0]
+  2007e8:	2140      	movs	r1, #64	; 0x40
+  2007ea:	438a      	bics	r2, r1
+  2007ec:	601a      	str	r2, [r3, #0]
+        while(UDP_ENDPOINT_CSR(1) & UDP_CSR_RX_PACKET_RECEIVED_BANK_1)
+  2007ee:	46c0      	nop			; (mov r8, r8)
+  2007f0:	4b0b      	ldr	r3, [pc, #44]	; (200820 <HandleRxdData+0x100>)
+  2007f2:	681a      	ldr	r2, [r3, #0]
+  2007f4:	2340      	movs	r3, #64	; 0x40
+  2007f6:	4013      	ands	r3, r2
+  2007f8:	d1fa      	bne.n	2007f0 <HandleRxdData+0xd0>
+            ;
+
+        if(UsbSoFarCount >= 64) {
+  2007fa:	4b0a      	ldr	r3, [pc, #40]	; (200824 <HandleRxdData+0x104>)
+  2007fc:	681b      	ldr	r3, [r3, #0]
+  2007fe:	2b3f      	cmp	r3, #63	; 0x3f
+  200800:	dd09      	ble.n	200816 <HandleRxdData+0xf6>
+            UsbPacketReceived(UsbBuffer, UsbSoFarCount);
+  200802:	4b08      	ldr	r3, [pc, #32]	; (200824 <HandleRxdData+0x104>)
+  200804:	681b      	ldr	r3, [r3, #0]
+  200806:	4a09      	ldr	r2, [pc, #36]	; (20082c <HandleRxdData+0x10c>)
+  200808:	1c10      	adds	r0, r2, #0
+  20080a:	1c19      	adds	r1, r3, #0
+  20080c:	f7ff fc42 	bl	200094 <UsbPacketReceived>
+            UsbSoFarCount = 0;
+  200810:	4b04      	ldr	r3, [pc, #16]	; (200824 <HandleRxdData+0x104>)
+  200812:	2200      	movs	r2, #0
+  200814:	601a      	str	r2, [r3, #0]
+        }
+    }
+}
+  200816:	46bd      	mov	sp, r7
+  200818:	b002      	add	sp, #8
+  20081a:	bc80      	pop	{r7}
+  20081c:	bc01      	pop	{r0}
+  20081e:	4700      	bx	r0
+  200820:	fffb0034 	.word	0xfffb0034
+  200824:	00200a80 	.word	0x00200a80
+  200828:	fffb0054 	.word	0xfffb0054
+  20082c:	00200a40 	.word	0x00200a40
+
+00200830 <UsbStart>:
+// D+ (to make the host think that we have been unplugged, resetting all
+// of its state) before reconnecting it and resetting the AT91's USB
+// peripheral.
+//-----------------------------------------------------------------------------
+void UsbStart(void)
+{
+  200830:	b580      	push	{r7, lr}
+  200832:	b082      	sub	sp, #8
+  200834:	af00      	add	r7, sp, #0
+    volatile int i;
+
+    UsbSoFarCount = 0;
+  200836:	4b16      	ldr	r3, [pc, #88]	; (200890 <UsbStart+0x60>)
+  200838:	2200      	movs	r2, #0
+  20083a:	601a      	str	r2, [r3, #0]
+
+	// take care the optimizer does not remove it!
+    for(i = 0; i < 1000000; i++) USB_D_PLUS_PULLUP_OFF();
+  20083c:	2300      	movs	r3, #0
+  20083e:	607b      	str	r3, [r7, #4]
+  200840:	e00a      	b.n	200858 <UsbStart+0x28>
+  200842:	4b14      	ldr	r3, [pc, #80]	; (200894 <UsbStart+0x64>)
+  200844:	2280      	movs	r2, #128	; 0x80
+  200846:	0252      	lsls	r2, r2, #9
+  200848:	601a      	str	r2, [r3, #0]
+  20084a:	4b13      	ldr	r3, [pc, #76]	; (200898 <UsbStart+0x68>)
+  20084c:	2280      	movs	r2, #128	; 0x80
+  20084e:	0252      	lsls	r2, r2, #9
+  200850:	601a      	str	r2, [r3, #0]
+  200852:	687b      	ldr	r3, [r7, #4]
+  200854:	3301      	adds	r3, #1
+  200856:	607b      	str	r3, [r7, #4]
+  200858:	687a      	ldr	r2, [r7, #4]
+  20085a:	4b10      	ldr	r3, [pc, #64]	; (20089c <UsbStart+0x6c>)
+  20085c:	429a      	cmp	r2, r3
+  20085e:	ddf0      	ble.n	200842 <UsbStart+0x12>
+
+    USB_D_PLUS_PULLUP_ON();
+  200860:	4b0f      	ldr	r3, [pc, #60]	; (2008a0 <UsbStart+0x70>)
+  200862:	2280      	movs	r2, #128	; 0x80
+  200864:	0252      	lsls	r2, r2, #9
+  200866:	601a      	str	r2, [r3, #0]
+  200868:	4b0b      	ldr	r3, [pc, #44]	; (200898 <UsbStart+0x68>)
+  20086a:	2280      	movs	r2, #128	; 0x80
+  20086c:	0252      	lsls	r2, r2, #9
+  20086e:	601a      	str	r2, [r3, #0]
+
+    if(UDP_INTERRUPT_STATUS & UDP_INTERRUPT_END_OF_BUS_RESET) {
+  200870:	4b0c      	ldr	r3, [pc, #48]	; (2008a4 <UsbStart+0x74>)
+  200872:	681a      	ldr	r2, [r3, #0]
+  200874:	2380      	movs	r3, #128	; 0x80
+  200876:	015b      	lsls	r3, r3, #5
+  200878:	4013      	ands	r3, r2
+  20087a:	d003      	beq.n	200884 <UsbStart+0x54>
+        UDP_INTERRUPT_CLEAR = UDP_INTERRUPT_END_OF_BUS_RESET;
+  20087c:	4b0a      	ldr	r3, [pc, #40]	; (2008a8 <UsbStart+0x78>)
+  20087e:	2280      	movs	r2, #128	; 0x80
+  200880:	0152      	lsls	r2, r2, #5
+  200882:	601a      	str	r2, [r3, #0]
+    }
+}
+  200884:	46bd      	mov	sp, r7
+  200886:	b002      	add	sp, #8
+  200888:	bc80      	pop	{r7}
+  20088a:	bc01      	pop	{r0}
+  20088c:	4700      	bx	r0
+  20088e:	46c0      	nop			; (mov r8, r8)
+  200890:	00200a80 	.word	0x00200a80
+  200894:	fffff430 	.word	0xfffff430
+  200898:	fffff410 	.word	0xfffff410
+  20089c:	000f423f 	.word	0x000f423f
+  2008a0:	fffff434 	.word	0xfffff434
+  2008a4:	fffb001c 	.word	0xfffb001c
+  2008a8:	fffb0020 	.word	0xfffb0020
+
+002008ac <UsbPoll>:
+//
+// Returns TRUE if we `did something' (received either a control or data
+// packet, or a piece of one at least), FALSE otherwise.
+//-----------------------------------------------------------------------------
+BOOL UsbPoll(void)
+{
+  2008ac:	b580      	push	{r7, lr}
+  2008ae:	b082      	sub	sp, #8
+  2008b0:	af00      	add	r7, sp, #0
+    BOOL ret = FALSE;
+  2008b2:	2300      	movs	r3, #0
+  2008b4:	607b      	str	r3, [r7, #4]
+
+    if(UDP_INTERRUPT_STATUS & UDP_INTERRUPT_END_OF_BUS_RESET) {
+  2008b6:	4b1f      	ldr	r3, [pc, #124]	; (200934 <UsbPoll+0x88>)
+  2008b8:	681a      	ldr	r2, [r3, #0]
+  2008ba:	2380      	movs	r3, #128	; 0x80
+  2008bc:	015b      	lsls	r3, r3, #5
+  2008be:	4013      	ands	r3, r2
+  2008c0:	d016      	beq.n	2008f0 <UsbPoll+0x44>
+        UDP_INTERRUPT_CLEAR = UDP_INTERRUPT_END_OF_BUS_RESET;
+  2008c2:	4b1d      	ldr	r3, [pc, #116]	; (200938 <UsbPoll+0x8c>)
+  2008c4:	2280      	movs	r2, #128	; 0x80
+  2008c6:	0152      	lsls	r2, r2, #5
+  2008c8:	601a      	str	r2, [r3, #0]
+
+        // following a reset we should be ready to receive a setup packet
+        UDP_RESET_ENDPOINT = 0xf;
+  2008ca:	4b1c      	ldr	r3, [pc, #112]	; (20093c <UsbPoll+0x90>)
+  2008cc:	220f      	movs	r2, #15
+  2008ce:	601a      	str	r2, [r3, #0]
+        UDP_RESET_ENDPOINT = 0;
+  2008d0:	4b1a      	ldr	r3, [pc, #104]	; (20093c <UsbPoll+0x90>)
+  2008d2:	2200      	movs	r2, #0
+  2008d4:	601a      	str	r2, [r3, #0]
+
+        UDP_FUNCTION_ADDR = UDP_FUNCTION_ADDR_ENABLED;
+  2008d6:	4b1a      	ldr	r3, [pc, #104]	; (200940 <UsbPoll+0x94>)
+  2008d8:	2280      	movs	r2, #128	; 0x80
+  2008da:	0052      	lsls	r2, r2, #1
+  2008dc:	601a      	str	r2, [r3, #0]
+
+        UDP_ENDPOINT_CSR(0) = UDP_CSR_EPTYPE_CONTROL | UDP_CSR_ENABLE_EP;
+  2008de:	4b19      	ldr	r3, [pc, #100]	; (200944 <UsbPoll+0x98>)
+  2008e0:	2280      	movs	r2, #128	; 0x80
+  2008e2:	0212      	lsls	r2, r2, #8
+  2008e4:	601a      	str	r2, [r3, #0]
+
+        CurrentConfiguration = 0;
+  2008e6:	4b18      	ldr	r3, [pc, #96]	; (200948 <UsbPoll+0x9c>)
+  2008e8:	2200      	movs	r2, #0
+  2008ea:	701a      	strb	r2, [r3, #0]
+
+        ret = TRUE;
+  2008ec:	2301      	movs	r3, #1
+  2008ee:	607b      	str	r3, [r7, #4]
+    }
+
+    if(UDP_INTERRUPT_STATUS & UDP_INTERRUPT_ENDPOINT(0)) {
+  2008f0:	4b10      	ldr	r3, [pc, #64]	; (200934 <UsbPoll+0x88>)
+  2008f2:	681b      	ldr	r3, [r3, #0]
+  2008f4:	1c1a      	adds	r2, r3, #0
+  2008f6:	2301      	movs	r3, #1
+  2008f8:	4013      	ands	r3, r2
+  2008fa:	061b      	lsls	r3, r3, #24
+  2008fc:	0e1b      	lsrs	r3, r3, #24
+  2008fe:	d008      	beq.n	200912 <UsbPoll+0x66>
+        if(UDP_ENDPOINT_CSR(0) & UDP_CSR_RX_HAVE_READ_SETUP_DATA) {
+  200900:	4b10      	ldr	r3, [pc, #64]	; (200944 <UsbPoll+0x98>)
+  200902:	681a      	ldr	r2, [r3, #0]
+  200904:	2304      	movs	r3, #4
+  200906:	4013      	ands	r3, r2
+  200908:	d003      	beq.n	200912 <UsbPoll+0x66>
+            HandleRxdSetupData();
+  20090a:	f7ff fd8f 	bl	20042c <HandleRxdSetupData>
+            ret = TRUE;
+  20090e:	2301      	movs	r3, #1
+  200910:	607b      	str	r3, [r7, #4]
+        }
+    }
+
+    if(UDP_INTERRUPT_STATUS & UDP_INTERRUPT_ENDPOINT(1)) {
+  200912:	4b08      	ldr	r3, [pc, #32]	; (200934 <UsbPoll+0x88>)
+  200914:	681a      	ldr	r2, [r3, #0]
+  200916:	2302      	movs	r3, #2
+  200918:	4013      	ands	r3, r2
+  20091a:	d003      	beq.n	200924 <UsbPoll+0x78>
+        HandleRxdData();
+  20091c:	f7ff ff00 	bl	200720 <HandleRxdData>
+        ret = TRUE;
+  200920:	2301      	movs	r3, #1
+  200922:	607b      	str	r3, [r7, #4]
+    }
+
+    return ret;
+  200924:	687b      	ldr	r3, [r7, #4]
+}
+  200926:	1c18      	adds	r0, r3, #0
+  200928:	46bd      	mov	sp, r7
+  20092a:	b002      	add	sp, #8
+  20092c:	bc80      	pop	{r7}
+  20092e:	bc02      	pop	{r1}
+  200930:	4708      	bx	r1
+  200932:	46c0      	nop			; (mov r8, r8)
+  200934:	fffb001c 	.word	0xfffb001c
+  200938:	fffb0020 	.word	0xfffb0020
+  20093c:	fffb0028 	.word	0xfffb0028
+  200940:	fffb0008 	.word	0xfffb0008
+  200944:	fffb0030 	.word	0xfffb0030
+  200948:	00200a84 	.word	0x00200a84
+  20094c:	00000000 	.word	0x00000000
+
+00200950 <__Bootrom_from_arm>:
+  200950:	e59fc000 	ldr	ip, [pc, #0]	; 200958 <__Bootrom_from_arm+0x8>
+  200954:	e12fff1c 	bx	ip
+  200958:	0020016d 	.word	0x0020016d
+  20095c:	00000000 	.word	0x00000000

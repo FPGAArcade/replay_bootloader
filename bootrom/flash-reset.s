@@ -7,13 +7,13 @@
 .global start
 start:
     b       Reset
-    b       0x00102004
     b       0x00102008
-    b       0x0010200C
     b       0x00102010
-    b       0x00102014
     b       0x00102018
-    b       0x0010201C
+    b       0x00102020
+    b       0x00102028
+    b       0x00102030
+    b       0x00102038
 
 Reset:
     ldr     sp,     = 0x00203ff8

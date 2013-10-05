@@ -5,7 +5,7 @@ CC	  = arm-none-eabi-gcc
 AS	  = arm-none-eabi-as
 LD	  = arm-none-eabi-ld
 OBJCOPY = arm-none-eabi-objcopy
-
+OBJDUMP = arm-none-eabi-objdump
 OBJDIR  = obj
 
 INCLUDE = -I.
@@ -27,16 +27,22 @@ $(OBJDIR)/bootrom.bin: $(OBJFLASH)
 	@echo obj/bootrom.bin
 	@$(LD) -g -Map=../bootrom.map -Tldscript-flash --oformat elf32-littlearm -o $(OBJDIR)/bootrom.elf $(OBJFLASH)
 	@$(OBJCOPY) -Obinary --pad-to 512 $(OBJDIR)/bootrom.elf $(OBJDIR)/bootrom.bin
+	@$(OBJDUMP) -d -S $(OBJDIR)/bootrom.elf > ../bootrom.lst
+
+#may not work with yartago only so we use copy below
+#@cat $(OBJDIR)/bootrom.bin $(OBJDIR)/bootrom-forjtag.bin > ../bootrom.bin
 
 ../bootrom.bin: $(OBJDIR)/bootrom.bin $(OBJDIR)/bootrom-forjtag.bin
 	@echo bootrom.bin
-	@cat $(OBJDIR)/bootrom.bin $(OBJDIR)/bootrom-forjtag.bin > ../bootrom.bin
+	@echo "@copy /b $(OBJDIR)\bootrom.bin + /b $(OBJDIR)\bootrom-forjtag.bin /b ..\bootrom.bin" > merge.bat
+	@.\merge.bat
 	@rm -rf $(OBJDIR) 
 
 $(OBJDIR)/bootrom-forjtag.bin: $(OBJJTAG)
 	@echo obj/bootrom-forjtag.bin
 	@$(LD) -g -Map=../bootrom-forjtag.map -Tldscript-ram-jtag --oformat elf32-littlearm -o $(OBJDIR)/bootrom-forjtag.elf $(OBJJTAG)
 	@$(OBJCOPY) -Obinary $(OBJDIR)/bootrom-forjtag.elf $(OBJDIR)/bootrom-forjtag.bin
+	@$(OBJDUMP) -d -S $(OBJDIR)/bootrom-forjtag.elf > ../bootrom-forjtag.lst
 
 forjtag.bin: $(OBJDIR)/bootrom-forjtag.bin
 	@echo forjtag.bin

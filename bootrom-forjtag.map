@@ -13,13 +13,14 @@ Linker script and memory map
  .text          0x00200000        0xc obj/ram-reset.o
                 0x00200000                start
  *(.text)
- .text          0x0020000c      0x2fc obj/bootrom.o
+ .text          0x0020000c      0x2f8 obj/bootrom.o
                 0x00200094                UsbPacketReceived
                 0x0020016c                Bootrom
- .text          0x00200308      0x648 obj/usb.o
-                0x00200690                UsbSendPacket
-                0x00200834                UsbStart
-                0x002008b0                UsbPoll
+ .text          0x00200304      0x648 obj/usb.o
+                0x0020068c                UsbSendPacket
+                0x00200830                UsbStart
+                0x002008ac                UsbPoll
+ *fill*         0x0020094c        0x4 00
  .text.stub     0x00200950        0xc linker stubs
 
 .glue_7         0x00200960        0x0
@@ -70,15 +71,15 @@ OUTPUT(obj/bootrom-forjtag.elf elf32-littlearm)
                                  0x12 (size before relaxing)
  .comment       0x00000000       0x12 obj/usb.o
 
-.debug_line     0x00000000      0x335
+.debug_line     0x00000000      0x333
  .debug_line    0x00000000       0x3a obj/ram-reset.o
- .debug_line    0x0000003a      0x125 obj/bootrom.o
- .debug_line    0x0000015f      0x1d6 obj/usb.o
+ .debug_line    0x0000003a      0x123 obj/bootrom.o
+ .debug_line    0x0000015d      0x1d6 obj/usb.o
 
-.debug_info     0x00000000      0x67a
- .debug_info    0x00000000       0x5e obj/ram-reset.o
- .debug_info    0x0000005e      0x209 obj/bootrom.o
- .debug_info    0x00000267      0x413 obj/usb.o
+.debug_info     0x00000000      0x681
+ .debug_info    0x00000000       0x65 obj/ram-reset.o
+ .debug_info    0x00000065      0x209 obj/bootrom.o
+ .debug_info    0x0000026e      0x413 obj/usb.o
 
 .debug_abbrev   0x00000000      0x2b8
  .debug_abbrev  0x00000000       0x14 obj/ram-reset.o
@@ -100,11 +101,11 @@ OUTPUT(obj/bootrom-forjtag.elf elf32-littlearm)
 .debug_ranges   0x00000000       0x20
  .debug_ranges  0x00000000       0x20 obj/bootrom.o
 
-.debug_str      0x00000000      0x271
- .debug_str     0x00000000      0x108 obj/bootrom.o
-                                0x126 (size before relaxing)
- .debug_str     0x00000108      0x169 obj/usb.o
-                                0x217 (size before relaxing)
+.debug_str      0x00000000      0x278
+ .debug_str     0x00000000      0x10f obj/bootrom.o
+                                0x12d (size before relaxing)
+ .debug_str     0x0000010f      0x169 obj/usb.o
+                                0x21e (size before relaxing)
 
 .debug_frame    0x00000000      0x174
  .debug_frame   0x00000000       0x88 obj/bootrom.o
