@@ -449,7 +449,7 @@ int main(int argc, char **argv)
         strcmp(argv[1], "load")==0   ) {
 
         for(;;) {
-            if(!UsbConnect()) {
+            if(UsbConnect()) {
                 break;
             }
             if(i == 0) {
