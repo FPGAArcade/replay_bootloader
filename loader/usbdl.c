@@ -355,13 +355,9 @@ static BYTE HexByte(char *s)
 // the file starts at the correct address, which is why we need to know
 // whether the file being loaded is a bootrom or an application.
 //-----------------------------------------------------------------------------
-static void LoadFlashFromSRecords(char *file, BOOL isBootrom)
+static void LoadFlashFromSRecords(char *file)
 {
-    if(isBootrom) {
-        ExpectedAddr = 0;
-    } else {
-        ExpectedAddr = 0x102000L;
-    }
+    ExpectedAddr = 0x102000L;
 
     FILE *f = fopen(file, "r");
     if(!f) {
@@ -404,14 +400,44 @@ static void LoadFlashFromSRecords(char *file, BOOL isBootrom)
     fflush(0);
 }
 
+//-----------------------------------------------------------------------------
+// Read binary data from a file, and write them to the device. 
+//-----------------------------------------------------------------------------
+static void LoadBootloaderFromBin(char *file)
+{
+    DWORD addr;
+
+    ExpectedAddr = 0;
+
+    FILE *f = fopen(file, "rb");
+    if(!f) {
+        printf("couldn't open file\n");
+        exit(-1);
+    }
+
+    printf("Fixing bootloader...\n");
+    fflush(0);
+
+    while(!feof(f)) {
+      BYTE c=fgetc(f);
+      //printf("%04x %02x\n",addr,c);
+      GotByte(addr, c);
+      ++addr;
+    }
+
+    if(!AllWritten) FlushPrevious();
+
+    fclose(f);
+    printf("\nflashing done.\n");
+    fflush(0);
+}
+
 int main(int argc, char **argv)
 {
     int i = 0;
 
     if(argc < 2) {
         printf("Usage: %s load    <application>.s19\n", argv[0]);
-        //disabled for now to avoid any troubles with it...
-		//printf("       %s bootrom <bootloader>.s19\n", argv[0]);
         return -1;
     }
     if(argc != 3) {
@@ -419,11 +445,11 @@ int main(int argc, char **argv)
         return -1;
     }
 
-    if(  /* strcmp(argv[1], "bootrom")==0 || */
+    if( strcmp(argv[1], "full")==0 ||
         strcmp(argv[1], "load")==0   ) {
 
         for(;;) {
-            if(UsbConnect()) {
+            if(!UsbConnect()) {
                 break;
             }
             if(i == 0) {
@@ -438,11 +464,11 @@ int main(int argc, char **argv)
             Sleep(5);
         }
 
-        if(strcmp(argv[1], "bootrom")==0) {
-            LoadFlashFromSRecords(argv[2], TRUE);
-        } else {
-            LoadFlashFromSRecords(argv[2], FALSE);
+        if(strcmp(argv[1], "full")==0) {
+            LoadBootloaderFromBin("bootrom.bin");
         }
+
+        LoadFlashFromSRecords(argv[2]);
 
     } else {
         printf("Command '%s' not recognized.\n", argv[1]);
