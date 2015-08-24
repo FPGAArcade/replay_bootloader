@@ -363,8 +363,7 @@ void Bootrom(void)
   2001a4:	0252      	lsls	r2, r2, #9
   2001a6:	601a      	str	r2, [r3, #0]
 
-
-	for(i = 0; i < 1000000; i++) LED_OFF(); // delay a bit, before testing the key
+	for(i = 0; i < 10000; i++) LED_OFF(); // delay a bit, before testing the key
   2001a8:	2300      	movs	r3, #0
   2001aa:	607b      	str	r3, [r7, #4]
   2001ac:	e006      	b.n	2001bc <Bootrom+0x50>
@@ -526,10 +525,10 @@ void Bootrom(void)
   20027c:	2b0a      	cmp	r3, #10
   20027e:	dd11      	ble.n	2002a4 <Bootrom+0x138>
   200280:	e000      	b.n	200284 <Bootrom+0x118>
+	// stack setup?
 	USB_D_PLUS_PULLUP_OFF();
 
-
-	for(i = 0; i < 1000000; i++) LED_OFF(); // delay a bit, before testing the key
+	for(i = 0; i < 10000; i++) LED_OFF(); // delay a bit, before testing the key
 
 	if (PIO_PIN_DATA_STATUS&(1<<GPIO_KEY)) goto run_flash;
   200282:	46c0      	nop			; (mov r8, r8)
@@ -594,7 +593,7 @@ run_flash:
   2002c4:	fffff420 	.word	0xfffff420
   2002c8:	fffff434 	.word	0xfffff434
   2002cc:	fffff430 	.word	0xfffff430
-  2002d0:	000f423f 	.word	0x000f423f
+  2002d0:	0000270f 	.word	0x0000270f
   2002d4:	fffff43c 	.word	0xfffff43c
   2002d8:	fffffd44 	.word	0xfffffd44
   2002dc:	00300100 	.word	0x00300100

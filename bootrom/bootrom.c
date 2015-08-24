@@ -135,8 +135,7 @@ void Bootrom(void)
 	// stack setup?
 	USB_D_PLUS_PULLUP_OFF();
 
-
-	for(i = 0; i < 1000000; i++) LED_OFF(); // delay a bit, before testing the key
+	for(i = 0; i < 10000; i++) LED_OFF(); // delay a bit, before testing the key
 
 	if (PIO_PIN_DATA_STATUS&(1<<GPIO_KEY)) goto run_flash;
 

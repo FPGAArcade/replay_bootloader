@@ -76,10 +76,10 @@ OUTPUT(obj/bootrom-forjtag.elf elf32-littlearm)
  .debug_line    0x0000003a      0x123 obj/bootrom.o
  .debug_line    0x0000015d      0x1d6 obj/usb.o
 
-.debug_info     0x00000000      0x681
- .debug_info    0x00000000       0x65 obj/ram-reset.o
- .debug_info    0x00000065      0x209 obj/bootrom.o
- .debug_info    0x0000026e      0x413 obj/usb.o
+.debug_info     0x00000000      0x697
+ .debug_info    0x00000000       0x7b obj/ram-reset.o
+ .debug_info    0x0000007b      0x209 obj/bootrom.o
+ .debug_info    0x00000284      0x413 obj/usb.o
 
 .debug_abbrev   0x00000000      0x2b8
  .debug_abbrev  0x00000000       0x14 obj/ram-reset.o
@@ -101,11 +101,11 @@ OUTPUT(obj/bootrom-forjtag.elf elf32-littlearm)
 .debug_ranges   0x00000000       0x20
  .debug_ranges  0x00000000       0x20 obj/bootrom.o
 
-.debug_str      0x00000000      0x278
- .debug_str     0x00000000      0x10f obj/bootrom.o
-                                0x12d (size before relaxing)
- .debug_str     0x0000010f      0x169 obj/usb.o
-                                0x21e (size before relaxing)
+.debug_str      0x00000000      0x28e
+ .debug_str     0x00000000      0x125 obj/bootrom.o
+                                0x143 (size before relaxing)
+ .debug_str     0x00000125      0x169 obj/usb.o
+                                0x234 (size before relaxing)
 
 .debug_frame    0x00000000      0x174
  .debug_frame   0x00000000       0x88 obj/bootrom.o
