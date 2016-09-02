@@ -15,14 +15,19 @@
 // for replay board. See also http://fpgaarcade.com/ and http://www.pin4.at/.
 //-----------------------------------------------------------------------------
 
+#if defined(WIN32)
 #include <windows.h>
 #include <setupapi.h>
+#include "include/hidsdi.h"
+#include "include/hidpi.h"
+#elif defined(__APPLE__)
+#include "usbdl_osx.h"
+#endif
+
 #include <stdio.h>
 #include <ctype.h>
 #include <stdlib.h>
 
-#include "include/hidsdi.h"
-#include "include/hidpi.h"
 
 #include "../include/usb_cmd.h"
 
@@ -45,6 +50,7 @@ static void ShowError(void)
 
 static BOOL UsbConnect(void)
 {
+#if defined(WIN32)
     typedef void (__stdcall *GetGuidProc)(GUID *);
     typedef BOOLEAN (__stdcall *GetAttrProc)(HANDLE, HIDD_ATTRIBUTES *);
     typedef BOOLEAN (__stdcall *GetPreparsedProc)(HANDLE,
@@ -165,6 +171,10 @@ static BOOL UsbConnect(void)
         return TRUE;
     }
     return FALSE;
+
+#else
+    return UsbConnect3(OUR_VID, OUR_PID, &UsbHandle);
+#endif
 }
 
 //-----------------------------------------------------------------------------
