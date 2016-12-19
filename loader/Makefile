@@ -19,5 +19,8 @@ all: ../$(APP_NAME)
 ../%_Darwin.elf: usbdl.c usbdl_osx.h ../include/usb_cmd.h
 	gcc -o $@ usbdl.c -framework IOKit -framework CoreFoundation
 
+../%_Linux.elf: usbdl.c usbdl_linux.h ../include/usb_cmd.h
+	gcc -Wall -o $@ usbdl.c `pkg-config libusb-1.0 --cflags --libs` -lpthread -std=c99 -D_XOPEN_SOURCE=500 -D_POSIX_C_SOURCE=200112L
+
 clean:
 	rm ../$(APP_NAME)

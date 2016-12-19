@@ -22,6 +22,8 @@
 #include "include/hidpi.h"
 #elif defined(__APPLE__)
 #include "usbdl_osx.h"
+#elif defined(__linux__)
+#include "usbdl_linux.h"
 #endif
 
 #include <stdio.h>
