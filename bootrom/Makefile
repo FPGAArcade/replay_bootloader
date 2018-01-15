@@ -34,8 +34,9 @@ $(OBJDIR)/bootrom.bin: $(OBJFLASH)
 
 ../bootrom.bin: $(OBJDIR)/bootrom.bin $(OBJDIR)/bootrom-forjtag.bin
 	@echo bootrom.bin
-	@echo "@copy /b $(OBJDIR)\bootrom.bin + /b $(OBJDIR)\bootrom-forjtag.bin /b ..\bootrom.bin" > merge.bat
-	@.\merge.bat
+	@cat $(OBJDIR)/bootrom.bin $(OBJDIR)/bootrom-forjtag.bin > ../bootrom.bin
+#	@echo "@copy /b $(OBJDIR)\bootrom.bin + /b $(OBJDIR)\bootrom-forjtag.bin /b ..\bootrom.bin" > merge.bat
+#	@.\merge.bat
 	@rm -rf $(OBJDIR) 
 
 $(OBJDIR)/bootrom-forjtag.bin: $(OBJJTAG)
