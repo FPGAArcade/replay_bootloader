@@ -64,9 +64,9 @@ OUTPUT(obj/bootrom.elf elf32-littlearm)
  .debug_line    0x00000000       0x4d obj/flash-reset.o
  .debug_line    0x0000004d       0x9a obj/fromflash.o
 
-.debug_info     0x00000000      0x15d
- .debug_info    0x00000000       0x7d obj/flash-reset.o
- .debug_info    0x0000007d       0xe0 obj/fromflash.o
+.debug_info     0x00000000      0x14b
+ .debug_info    0x00000000       0x6b obj/flash-reset.o
+ .debug_info    0x0000006b       0xe0 obj/fromflash.o
 
 .debug_abbrev   0x00000000       0xa5
  .debug_abbrev  0x00000000       0x14 obj/flash-reset.o
@@ -81,9 +81,9 @@ OUTPUT(obj/bootrom.elf elf32-littlearm)
 .debug_loc      0x00000000       0x70
  .debug_loc     0x00000000       0x70 obj/fromflash.o
 
-.debug_str      0x00000000       0xc5
- .debug_str     0x00000000       0xc5 obj/fromflash.o
-                                 0xde (size before relaxing)
+.debug_str      0x00000000       0xb3
+ .debug_str     0x00000000       0xb3 obj/fromflash.o
+                                 0xcc (size before relaxing)
 
 .debug_frame    0x00000000       0x50
  .debug_frame   0x00000000       0x50 obj/fromflash.o

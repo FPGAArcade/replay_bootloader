@@ -181,7 +181,7 @@ void Bootrom(void)
 
 			// you may increase the number below if the enumeration process
 			// in Windows is longer and the downloader does not work...)
-			if (i>10) { //after ~5sec or no keypress
+			if (i>20) { //after ~10sec or no keypress
 run_flash:
 				USB_D_PLUS_PULLUP_OFF();
 				LED_OFF();

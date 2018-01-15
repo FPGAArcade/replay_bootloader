@@ -520,9 +520,9 @@ void Bootrom(void)
 
 			// you may increase the number below if the enumeration process
 			// in Windows is longer and the downloader does not work...)
-			if (i>10) { //after ~5sec or no keypress
+			if (i>20) { //after ~10sec or no keypress
   20027a:	687b      	ldr	r3, [r7, #4]
-  20027c:	2b0a      	cmp	r3, #10
+  20027c:	2b14      	cmp	r3, #20
   20027e:	dd11      	ble.n	2002a4 <Bootrom+0x138>
   200280:	e000      	b.n	200284 <Bootrom+0x118>
 	// stack setup?
@@ -535,7 +535,7 @@ void Bootrom(void)
 
 			// you may increase the number below if the enumeration process
 			// in Windows is longer and the downloader does not work...)
-			if (i>10) { //after ~5sec or no keypress
+			if (i>20) { //after ~10sec or no keypress
 run_flash:
 				USB_D_PLUS_PULLUP_OFF();
   200284:	4b11      	ldr	r3, [pc, #68]	; (2002cc <Bootrom+0x160>)
