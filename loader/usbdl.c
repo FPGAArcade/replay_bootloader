@@ -417,7 +417,7 @@ static void LoadFlashFromSRecords(char *file)
 //-----------------------------------------------------------------------------
 static void LoadBootloaderFromBin(char *file)
 {
-    DWORD addr;
+    DWORD addr = 0;
 
     ExpectedAddr = 0;
 
