@@ -24,6 +24,8 @@
 #include "usbdl_osx.h"
 #elif defined(__linux__)
 #include "usbdl_linux.h"
+#elif defined (__CYGWIN__)
+#error "use mingw32.exe"
 #endif
 
 #include <stdio.h>
@@ -192,7 +194,12 @@ static BOOL ReceiveCommandPoll(UsbCommand *c)
 
     if(!ReadInProgress) {
         memset(&Ov, 0, sizeof(Ov));
-        ReadFile(UsbHandle, Buf, 65, &HaveRead, &Ov);
+        if(ReadFile(UsbHandle, Buf, 65, &HaveRead, &Ov))
+        {
+            memcpy(c, Buf+1, 64);
+            return TRUE;
+        }
+
         if(GetLastError() != ERROR_IO_PENDING) {
             ShowError();
             exit(-1);

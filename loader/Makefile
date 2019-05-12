@@ -14,7 +14,7 @@ LIBS   = -lkernel32 -luser32 -ladvapi32 -luuid -lsetupapi
 all: ../$(APP_NAME)
 
 ../usbdl.exe: usbdl.c ../include/usb_cmd.h
-	gcc -o ../usbdl.exe usbdl.c $(LIBS)
+	gcc -s -o ../usbdl.exe usbdl.c $(LIBS)
 
 ../%_Darwin.elf: usbdl.c usbdl_osx.h ../include/usb_cmd.h
 	gcc -o $@ usbdl.c -framework IOKit -framework CoreFoundation
