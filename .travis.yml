@@ -1,0 +1,47 @@
+language: c
+os:
+  - windows
+  - linux
+  - osx
+cache:
+  directories:
+    - .yagarto
+addons:
+  apt:
+    packages:
+      - pkg-config
+      - libusb-1.0-0-dev
+      - zip
+install:
+  - if [ "$TRAVIS_OS_NAME" = "windows" ]; then choco install make; fi
+  - if [ "$TRAVIS_OS_NAME" = "windows" ] && [ ! -f ".yagarto/version.txt" ]; then wget https://sourceforge.net/projects/yagarto/files/YAGARTO%20for%20Windows/20111119/yagarto-bu-2.21_gcc-4.6.2-c-c%2B%2B_nl-1.19.0_gdb-7.3.1_eabi_20111119.exe; fi
+  - if [ "$TRAVIS_OS_NAME" = "windows" ] && [ ! -f ".yagarto/version.txt" ]; then 7z x "yagarto-bu-2.21_gcc-4.6.2-c-c++_nl-1.19.0_gdb-7.3.1_eabi_20111119.exe" -o.yagarto; fi
+  - if [ "$TRAVIS_OS_NAME" = "windows" ]; then export PATH="$PWD/.yagarto/bin:$PATH"; fi
+script:
+  - cd loader && make clean && make && cd ..
+  - if [ "$TRAVIS_OS_NAME" = "windows" ]; then cd app && make clean && make && cd ..; fi
+  - if [ "$TRAVIS_OS_NAME" = "windows" ]; then cd bootrom && make clean && make && cd ..; fi
+before_deploy:
+  - echo -n `git config --get remote.origin.url` > version.txt
+  - echo -n " " >> version.txt
+  - echo -n `git describe --always --dirty=" (dirty) "` >> version.txt
+  - echo " $TRAVIS_TAG" >> version.txt
+  - cat version.txt
+  - if [ "$TRAVIS_OS_NAME" = "windows" ]; then 7z a usbdl-$TRAVIS_OS_NAME.zip usbdl* version.txt; else zip usbdl-$TRAVIS_OS_NAME.zip usbdl* version.txt; fi
+  - if [ "$TRAVIS_OS_NAME" = "windows" ]; then 7z a app.zip app_image.* version.txt; fi
+  - if [ "$TRAVIS_OS_NAME" = "windows" ]; then 7z a bootrom.zip bootrom.* bootrom-* version.txt; fi
+deploy:
+  provider: releases
+  api_key:
+    secure: aAVjZ9+KBYSB4DK2qZMzK/cAhyTTY8xnPAz9ygRcDRZVIDb4w60pYWRrjjwMX8u7g5OvbROLQaLlIQfr4l7YBO0UgjguMXVTD8hfRxoZDQfToFLJOXVBCvYEo0HfzbfRz9FchWbqqrZ8ErvyYVpxaP6dfh1nxhWu6lA2kGIEodAtgE8v84OY+mXxoG5G71QEZhNHWv1CwTiJfGPIPqousHKXPkllPfTcxpZekZrc3l5Xub55Q7QMY1F6bDO5TyhXy3i4fZu8jwfmLeFjNbRP5DWQZKZ1Z+SAnSDhpOMcB9E0IXPEtW0VjRxLGWKR4CBNOD4DajtH1wZA92ruMz4niUwlysLjOY38hJUh/X3ozJxjk7UZkZk799LMPp5ev+Huv6Z4UrSwft/dGROjX1SF9/VOysP+bmt/WkxFqIkO3kGU/PdAwyEA/pD9qPr/pVVClH4lSv1qlsrpEixl7FumpxZ4KUDrSLxxhIIW9GQ2FDyObiSKXdGrw0D0Ahi5IYlWlJaSxx+Pe1CmbGqY4DZkLqN28nbTZiNWt+7QgsI18YqXarLNnFpqcJCd2DR5kCD89WAmlTSzBwPI+a9jM64EFRoZpeA75ZIejkkMvi+RdAxjX4iX3pmR7QtpJJEwsUkf4iMl76locFJIusdjkyWIMP9k6wO+mHpl+0QiVMn+208=
+  file_glob: true
+  file: "*.zip"
+  overwrite: true
+  skip_cleanup: true
+  on:
+    repo: FPGAArcade/replay_bootloader
+    branch: master
+    tags: true
+notifications:
+  slack:
+    secure: kg+dADYzy/E3y6BIxBIW9yYIiSaBHic0B7ChT+STuYpkmARmTyt9a2qtuI3gvzq3MZLNWP2Rt/rB2SAwT8IBOcmIRUJGIvgWN89YRKTgScis45SgeP04FkZMDpde1LFoQFDdDzvUrg5Uh6hlkQ/Rb3I/QugqSNYX1+DpP4ahtGb5cjEk2bgJf+s2HgE19O3nyBg1h92KKlzMkXIXCLXT7MRQI6j3rZ9ST7mxxtC2ecno36uZsUriv0Y1TjyhIEjP+/MhHvSgJ7ThRVri52ARn33DX3a4D++ZbrkcJXkWUW5/kEwGQoEQ2YA6P+gK3cEP6810SBFPkLKR7JmuoxJSGBgKJ8KBV5utKzUS/uHZPyNVkP3rS04QpVb4Otj8qXRMSGpuQAEVilGHOXg/i/0TWizqYc/EKdKCgkKUcatEkOyoUcvIerLyD1K5PeP4ueDUzgRWvT9Tj+vQJ79FhJv/ed2p4eRxczpK67J7maZkWJlRE3o/MUZndyxNx9Sd7iYZIV2EG00tkr96Dsbg7counASeJFRQDkmCLNCaGqSK2icW0yaRtm5Sc/a4DlbFaeJ+NYbZW3MgSQ15M0RztEjY4FpNAiKc6xTLj/A208x5jjyblvKSnA+XxxmRk9+M5FWM7OprxxfwAkS3VqqGcMJFQ1zOfvp5I4YdGOVcNTEPvNA=
