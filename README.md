@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/erique/replay_bootloader.svg?branch=master)](https://travis-ci.org/erique/replay_bootloader)
+[![Build Status](https://travis-ci.org/FPGAArcade/replay_bootloader.svg?branch=master)](https://travis-ci.org/FPGAArcade/replay_bootloader)
 
 ## This is a simple bootloader for AT91SAM7256 processor located on the fpgaarcade.com replay board. 
 
