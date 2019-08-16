@@ -493,7 +493,7 @@ static void LoadFlashFromSRecords(char *file)
 //-----------------------------------------------------------------------------
 // Read binary data from a file, and write them to the device. 
 //-----------------------------------------------------------------------------
-static void LoadBootloaderFromBin(char *file, bool force)
+static void LoadBootloaderFromBin(char *file, BOOL force)
 {
     DWORD addr = 0;
     uint32_t filesize = 0;
