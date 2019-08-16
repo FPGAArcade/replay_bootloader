@@ -18,11 +18,14 @@ typedef struct {
     } d;
 } UsbCommand;
 
+#define CMD_VERSION 0x00010002
+
 // For the bootloader
 #define CMD_DEVICE_INFO                         0x0000
 #define CMD_SETUP_WRITE                         0x0001
 #define CMD_FINISH_WRITE                        0x0003
 #define CMD_HARDWARE_RESET                      0x0004
+#define CMD_CRC32_MEMORY                        0x0005
 #define CMD_ACK                                 0x00ff
 
 #endif

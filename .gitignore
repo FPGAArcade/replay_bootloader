@@ -1,2 +1,5 @@
 .yagarto
 version.txt
+bootrom*
+*.elf
+*.exe
