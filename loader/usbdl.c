@@ -20,6 +20,7 @@
 #include <setupapi.h>
 #include "include/hidsdi.h"
 #include "include/hidpi.h"
+#include <stdint.h>
 #elif defined(__APPLE__)
 #include "usbdl_osx.h"
 #elif defined(__linux__)
