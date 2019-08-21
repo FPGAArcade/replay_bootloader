@@ -315,7 +315,7 @@ static uint32_t feed_crc32(uint32_t crc, void* memory, unsigned int length)
 
 static uint32_t crc32(void* memory, unsigned int length)
 {
-    uint32_t crc;
+    uint32_t crc = 0;
     crc = feed_crc32(crc, 0, 0xffffffff);
     return feed_crc32(crc, memory, length);
 }
