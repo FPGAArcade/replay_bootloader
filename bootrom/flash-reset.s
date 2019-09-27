@@ -15,6 +15,9 @@ start:
     b       0x00102030
     b       0x00102038
 
+length:
+  .word     __rodata_end__
+
 Reset:
     ldr     sp,     = 0x00203ff8
     bl      CMain

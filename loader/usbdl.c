@@ -20,6 +20,7 @@
 #include <setupapi.h>
 #include "include/hidsdi.h"
 #include "include/hidpi.h"
+#include <stdint.h>
 #elif defined(__APPLE__)
 #include "usbdl_osx.h"
 #elif defined(__linux__)
@@ -43,6 +44,7 @@
 #define FLASH_PAGE_SIZE     256
 
 static HANDLE UsbHandle;
+static DWORD VerifyTransfers = 0;
 
 static void ShowError(void)
 {
@@ -267,6 +269,7 @@ static void SendCommand(UsbCommand *c, BOOL wantAck)
     if(wantAck) {
         UsbCommand ack;
         ReceiveCommand(&ack);
+        memcpy(c, &ack, sizeof(ack));
         if(ack.cmd != CMD_ACK) {
             printf("bad ACK\n");
             exit(-1);
@@ -286,6 +289,36 @@ static BYTE QueuedToSend[256];
 // This is TRUE if all of the bytes currently in QueuedToSend have already
 // been written to the device, else FALSE.
 static BOOL AllWritten;
+
+static uint32_t feed_crc32(uint32_t crc, void* memory, unsigned int length)
+{
+    unsigned char* data = (unsigned char*)memory;
+    crc = ~crc;
+
+    if (data == 0 && length == 0xffffffff) {
+        crc = length;
+        length = 0;
+    }
+
+    for (uint32_t i = 0; i < length; ++i) {
+        uint32_t byte = *data++;
+        crc = crc ^ byte;
+
+        for (int j = 7; j >= 0; j--) {    // Do eight times.
+            uint32_t mask = -(crc & 1);
+            crc = (crc >> 1) ^ (0xEDB88320 & mask);
+        }
+    }
+
+    return ~crc;
+}
+
+static uint32_t crc32(void* memory, unsigned int length)
+{
+    uint32_t crc = 0;
+    crc = feed_crc32(crc, 0, 0xffffffff);
+    return feed_crc32(crc, memory, length);
+}
 
 //-----------------------------------------------------------------------------
 // Called when we have accumulated a full page's worth of bytes in
@@ -308,6 +341,11 @@ static void FlushPrevious(void)
         memcpy(c.d.asBytes, QueuedToSend+i, 48);
         c.ext1 = (i/4);
         SendCommand(&c, TRUE);
+        if (VerifyTransfers) {
+            unsigned int crc = crc32(QueuedToSend+i, 48);
+            if (crc != c.ext1)
+                printf("\nUSB packet CRC32 mismatch on CMD_SETUP_WRITE!\n");
+        }
     }
 
     c.cmd = CMD_FINISH_WRITE;
@@ -316,6 +354,11 @@ static void FlushPrevious(void)
     printf(".");
     memcpy(c.d.asBytes, QueuedToSend+240, 16);
     SendCommand(&c, TRUE);
+    if (VerifyTransfers) {
+        unsigned int crc = crc32(QueuedToSend+240, 16);
+        if (crc != c.ext1)
+            printf("\nUSB packet CRC32 mismatch on CMD_FINISH_WRITE!\n");
+    }
 
     AllWritten = TRUE;
 }
@@ -376,6 +419,9 @@ static BYTE HexByte(char *s)
 //-----------------------------------------------------------------------------
 static void LoadFlashFromSRecords(char *file)
 {
+    uint32_t filesize = 0;
+    uint32_t file_crc32 = 0;
+
     ExpectedAddr = 0x102000L;
 
     FILE *f = fopen(file, "r");
@@ -388,6 +434,7 @@ static void LoadFlashFromSRecords(char *file)
     fflush(0);
 
     char line[512];
+    file_crc32 = feed_crc32(file_crc32, 0, 0xffffffff);
     while(fgets(line, sizeof(line), f)) {
         if(memcmp(line, "S3", 2)==0) {
             char *s = line + 2;
@@ -403,10 +450,16 @@ static void LoadFlashFromSRecords(char *file)
 
             int i;
             for(i = 0; i < len; i++) {
+                uint8_t v = 0xff;
                 while((addr+i) > ExpectedAddr) {
                     GotByte(ExpectedAddr, 0xff);
+                    file_crc32 = feed_crc32(file_crc32, &v, sizeof(v));
+                    filesize++;
                 }
-                GotByte(addr+i, HexByte(s));
+                v = HexByte(s);
+                GotByte(addr+i, v);
+                file_crc32 = feed_crc32(file_crc32, &v, sizeof(v));
+                filesize++;
                 s += 2;
             }
         }
@@ -415,16 +468,37 @@ static void LoadFlashFromSRecords(char *file)
     if(!AllWritten) FlushPrevious();
 
     fclose(f);
-    printf("\nflashing done.\n");
+    printf("\nflashing done. size = %d bytes ; CRC32 = %08x\n", filesize, file_crc32);
     fflush(0);
+
+    if (VerifyTransfers) {
+        printf("Verifying firmware...\n");
+
+        UsbCommand c;
+        memset(&c, 0xfe, sizeof(c));
+        c.cmd = CMD_CRC32_MEMORY;
+        c.ext1 = 0x102000L;
+        c.ext2 = filesize;
+        SendCommand(&c, TRUE);
+
+        if (file_crc32 != c.ext1) {
+            printf("Firmware verification FAILED!\n");
+            exit(-1);
+        }
+
+        printf("Firmware verified OK!\n");
+    }
+
 }
 
 //-----------------------------------------------------------------------------
 // Read binary data from a file, and write them to the device. 
 //-----------------------------------------------------------------------------
-static void LoadBootloaderFromBin(char *file)
+static void LoadBootloaderFromBin(char *file, BOOL force)
 {
     DWORD addr = 0;
+    uint32_t filesize = 0;
+    uint32_t file_crc32 = 0;
 
     ExpectedAddr = 0;
 
@@ -432,6 +506,42 @@ static void LoadBootloaderFromBin(char *file)
     if(!f) {
         printf("couldn't open file\n");
         exit(-1);
+    }
+
+    {
+        fseek(f, 0, SEEK_END);
+        filesize = ftell(f);
+        fseek(f, 0, SEEK_SET);
+
+        printf("Bootloader is %i bytes; ", filesize);
+
+        void* mem = malloc(filesize);
+        fread(mem, 1, filesize, f);
+        fseek(f, 0, SEEK_SET);
+        file_crc32 = crc32(mem, filesize);
+        free(mem);
+
+        printf("CRC32 is %08x\n", file_crc32);
+
+        if (!force) {
+            UsbCommand c;
+            memset(&c, 0xfe, sizeof(c));
+            c.cmd = CMD_CRC32_MEMORY;
+            c.ext1 = 0x0;
+            c.ext2 = filesize;
+            SendCommand(&c, TRUE);
+
+            printf("Existing bootloader CRC32 is %08x\n", c.ext1);
+
+            if (file_crc32 == c.ext1) {
+                printf("Existing bootloader is up to date - skipping\n");
+                fclose(f);
+                return;
+            }
+        } else {
+            printf("Ignoring existing bootloader - forcing update\n");
+        }
+
     }
 
     printf("Fixing bootloader...\n");
@@ -449,23 +559,45 @@ static void LoadBootloaderFromBin(char *file)
     fclose(f);
     printf("\nflashing done.\n");
     fflush(0);
+
+    if (VerifyTransfers) {
+        printf("Verifying bootloader...\n");
+
+        UsbCommand c;
+        memset(&c, 0xfe, sizeof(c));
+        c.cmd = CMD_CRC32_MEMORY;
+        c.ext1 = 0x0;
+        c.ext2 = filesize;
+        SendCommand(&c, TRUE);
+
+        if (file_crc32 != c.ext1) {
+            printf("Bootloader verification FAILED!\n");
+            exit(-1);
+        }
+
+        printf("Bootloader verified OK!\n");
+    }
 }
 
 int main(int argc, char **argv)
 {
     int i = 0;
+    uint32_t bootloader_version = 0x0;
+    uint32_t bootloader_size = 0x0;
+    uint32_t firmware_size = 0x0;
 
     if(argc < 2) {
         printf("Usage: %s load    <application>.s19\n", argv[0]);
         return -1;
     }
-    if(argc != 3) {
+    if(strcmp(argv[1], "info") && argc != 3) {
         printf("Need filename.\n");
         return -1;
     }
 
     if( strcmp(argv[1], "full")==0 ||
-        strcmp(argv[1], "load")==0   ) {
+        strcmp(argv[1], "load")==0 || 
+        strcmp(argv[1], "info")==0 ) {
 
         for(;;) {
             if(UsbConnect()) {
@@ -483,8 +615,62 @@ int main(int argc, char **argv)
             Sleep(5);
         }
 
+        printf("Device connected - quering version...\n");
+
+        UsbCommand c;
+        memset(&c, 0xfe, sizeof(c));
+        c.cmd = CMD_DEVICE_INFO;
+        SendCommand(&c, TRUE);
+        if (c.ext1 != 0xfefefefe) {
+            bootloader_version = c.ext1;
+            bootloader_size = c.ext2;
+            firmware_size = c.ext3;
+            VerifyTransfers = 1;
+        }
+
+        printf("Bootloader version : %08x\n", bootloader_version);
+
+        if (strcmp(argv[1], "info")==0) {
+
+            if (bootloader_version == 0) {
+                printf("Command not supported - bootloader too old\n");
+                return 0;
+            }
+
+            if (!bootloader_size) {
+                printf("Unknown bootloader size - too old?\n");
+            } else {
+
+                bootloader_size += 0x200; // add size of first stage bootrom
+                printf("Bootloader size : %d bytes\n", bootloader_size);
+
+                memset(&c, 0xfe, sizeof(c));
+                c.cmd = CMD_CRC32_MEMORY;
+                c.ext1 = 0x0;
+                c.ext2 = bootloader_size;
+                SendCommand(&c, TRUE);
+                printf("Bootloader CRC32: %08x\n", c.ext1);
+            }
+
+            if (!firmware_size) {
+                printf("Unknown firmware size - too old\n");
+            } else {
+
+                printf("Firmware size : %d bytes\n", firmware_size);
+
+                memset(&c, 0xfe, sizeof(c));
+                c.cmd = CMD_CRC32_MEMORY;
+                c.ext1 = 0x102000;
+                c.ext2 = firmware_size;
+                SendCommand(&c, TRUE);
+                printf("Firmware CRC32: %08x\n", c.ext1);
+            }
+
+            return 0;
+        }
+
         if(strcmp(argv[1], "full")==0) {
-            LoadBootloaderFromBin("bootrom.bin");
+            LoadBootloaderFromBin("bootrom.bin", bootloader_version == 0x0);
         }
 
         LoadFlashFromSRecords(argv[2]);

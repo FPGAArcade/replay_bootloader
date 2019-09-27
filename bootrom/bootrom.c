@@ -62,6 +62,26 @@ static void Fatal(void)
 	for(;;);
 }
 
+static unsigned int crc32(volatile void* memory, unsigned int length)
+{
+    unsigned int crc = 0xffffffff;
+    unsigned char* data = (unsigned char*)memory;
+    unsigned int i;
+    int j;
+
+    for (i = 0; i < length; ++i) {
+        unsigned int byte = *data++;
+        crc = crc ^ byte;
+
+        for (j = 7; j >= 0; j--) {    // Do eight times.
+            unsigned int mask = -(crc & 1);
+            crc = (crc >> 1) ^ (0xEDB88320 & mask);
+        }
+    }
+
+    return ~crc;
+}
+
 void UsbPacketReceived(BYTE *packet, int len)
 {
 	int i;
@@ -74,6 +94,11 @@ void UsbPacketReceived(BYTE *packet, int len)
 
 	switch(c->cmd) {
 		case CMD_DEVICE_INFO:
+			c->ext1 = CMD_VERSION;
+			// copy size of the bootloader (if tag matches)
+			c->ext2 = (*(DWORD*)0x100208 == 0xb007c0de) ? *(DWORD*)0x10020c : 0;
+			// copy size of the arm firmware (if recent enough)
+			c->ext3 = (*(DWORD*)0x102020 == 0x600dc0de) ? *(DWORD*)0x102024 : 0;
 			break;
 
 		case CMD_SETUP_WRITE:
@@ -81,6 +106,7 @@ void UsbPacketReceived(BYTE *packet, int len)
 			for(i = 0; i < 12; i++) {
 				p[i+c->ext1] = c->d.asDwords[i];
 			}
+			c->ext1 = crc32(c->d.asDwords, 12 * sizeof(c->d.asDwords[0]));
 			break;
 
 		case CMD_FINISH_WRITE:
@@ -94,10 +120,21 @@ void UsbPacketReceived(BYTE *packet, int len)
 				FCMD_WRITE_PAGE;
 			while(!(MC_FLASH_STATUS & MC_FLASH_STATUS_READY))
 				;
+
+			c->ext1 = crc32(c->d.asDwords, 4 * sizeof(c->d.asDwords[0]));
 			break;
 
 		case CMD_HARDWARE_RESET:
 			break;
+
+		case CMD_CRC32_MEMORY:
+		{
+			void *p = (void*)c->ext1;
+			unsigned int len = c->ext2;
+			unsigned int crc = crc32(p,len);
+			c->ext1 = crc;
+			break;
+		}
 
 		default:
 			Fatal();
@@ -135,9 +172,11 @@ void Bootrom(void)
 	// stack setup?
 	USB_D_PLUS_PULLUP_OFF();
 
+	int always_connect_usb = 0x1 & *(DWORD*)0x200010;
+
 	for(i = 0; i < 10000; i++) LED_OFF(); // delay a bit, before testing the key
 
-	if (PIO_PIN_DATA_STATUS&(1<<GPIO_KEY)) goto run_flash;
+	if (!always_connect_usb && PIO_PIN_DATA_STATUS&(1<<GPIO_KEY)) goto run_flash;
 
 	// disable watchdog
 	WDT_MODE = WDT_MODE_DISABLE;
